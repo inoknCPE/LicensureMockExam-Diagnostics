@@ -1,8 +1,4 @@
-# Licensure Examination System — Authentication Milestone
-
-This is the first desktop milestone for the **Web-Based Licensure Examination
-Diagnostic and Mock Testing System with TOS Mapping, Competency Gap Analytics,
-and Automated Remediation Scheduling**.
+# Login, Register, Forgot Password, and Account Recovery
 
 ## Included
 
@@ -81,13 +77,3 @@ Runtime data is created automatically:
 
 - Database: `data/licensure_exam.db`
 - Log file: `app_logging/app.log`
-
-## Security note
-
-The desktop prototype uses local SQLite storage. When the project becomes a web
-application, lockout decisions, sessions, password-reset flows, CSRF protection,
-rate limiting, and authorization must be enforced on the server.
-
-The prototype validates and stores email addresses but does not yet send email
-or verify ownership. Add SMTP/API delivery and token verification on the future
-web server rather than embedding provider credentials in the desktop app.
