@@ -1,0 +1,6 @@
+.venv/
+.setup-complete
+__pycache__/
+*.py[cod]
+data/
+app_logging/
