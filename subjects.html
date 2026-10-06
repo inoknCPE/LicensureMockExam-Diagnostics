@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computer Engineering Subjects | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="index.html#how-it-works">HOW IT WORKS</a>
+                <a class="link" href="subjects.html">SUBJECTS</a>
+                <a class="link" href="faq.html">FAQ</a>
+                <a class="link" href="signup.html">SIGN UP</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <section class="section-padding container">
+        <h1 class="text-center">Computer Engineering Disciplines</h1>
+        <p class="text-center" style="opacity: 0.8; max-width: 680px; margin: 10px auto 40px;">Explore the six Computer Engineering disciplines and their five domains. Practice drills are open to guests; full mock exams are for registered examinees.</p>
+        
+        <div class="subjects-grid" id="discipline-grid">
+            <!-- Six discipline cards and their five domains are rendered from DISCIPLINES. -->
+        </div>
+
+        <div style="margin-top: 50px; text-align: center; background: var(--surface); padding: 30px; border-radius: 16px; border: 1px dashed var(--border);">
+            <h3>Looking for Custom Topic Combinations?</h3>
+            <p style="color: var(--gray-text); font-size: 0.95rem; margin: 10px 0 20px;">Build a custom mock set with adjustable difficulty ratios and time limits using the Exam Generator.</p>
+            <button class="btn-solid-pill" onclick="goToGenerator()">Open Custom Exam Generator →</button>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="faq.html">FAQ & Help</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="subjects.html">CpE Disciplines</a>
+                    <a href="login.html">Examinee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <a href="generator.html">Exam Generator</a>
+                    <a href="exam-history.html">Score Reports</a>
+                    <a href="remediation.html">Remediation Exams</a>
+                    <a href="test-bank.html">Admin Test Bank</a>
+                </div>
+            </div>
+            <div class="footer-programs">
+                <div class="trust-badges small">
+                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-bottom">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                info@cpedle.com
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const grid = document.getElementById('discipline-grid');
+            Object.entries(DISCIPLINES).forEach(([discipline, domains], index) => {
+                const card = document.createElement('div');
+                card.className = 'card subject-card';
+                card.innerHTML = `
+                    <span class="postcard-tag">Discipline ${index + 1}</span>
+                    <h3 style="font-style: normal; margin: 10px 0 12px; font-size: 1.25rem;"></h3>
+                    <ul class="domain-list"></ul>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-outline-pill practice-btn">Practice Drill</button>
+                        <button class="btn-solid-pill mock-btn">Mock Exam</button>
+                    </div>`;
+                card.querySelector('h3').textContent = discipline;
+                domains.forEach(domain => {
+                    const item = document.createElement('li');
+                    item.textContent = domain;
+                    card.querySelector('ul').appendChild(item);
+                });
+                card.querySelector('.practice-btn').addEventListener('click', () => startPractice(discipline));
+                card.querySelector('.mock-btn').addEventListener('click', () => startMock(discipline));
+                grid.appendChild(card);
+            });
+            const comprehensive = document.createElement('div');
+            comprehensive.className = 'card subject-card';
+            comprehensive.style.border = '2px solid var(--teal)';
+            comprehensive.innerHTML = `
+                <span class="postcard-tag">All Disciplines</span>
+                <h3 style="font-style: normal; margin: 10px 0 12px; font-size: 1.25rem;">Comprehensive Computer Engineering Simulation</h3>
+                <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 20px;">Practice across all available domains. This is a project mock exam, not an official licensure examination.</p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-outline-pill practice-btn">Sample Diagnostic</button>
+                    <button class="btn-solid-pill coral-btn mock-btn">Full Mock Exam</button>
+                </div>`;
+            comprehensive.querySelector('.practice-btn').addEventListener('click', () => startPractice('All'));
+            comprehensive.querySelector('.mock-btn').addEventListener('click', () => startMock('All'));
+            grid.appendChild(comprehensive);
+
+            const user = CpedleDB.getCurrentUser();
+            const navBar = document.getElementById('nav-options-bar');
+            
+            if (user.role === 'ADMIN') {
+                navBar.innerHTML = `
+                    <a class="link" href="admin-dashboard.html">ADMIN DASHBOARD</a>
+                    <a class="link" href="test-bank.html">TEST BANK</a>
+                    <a class="link" href="admin-generator.html">GENERATOR</a>
+                    <a class="link" href="admin-requests.html">REQUESTS</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            } else if (user.role === 'EXAMINER') {
+                navBar.innerHTML = `
+                    <a class="link" href="examiner-dashboard.html">EXAMINER DASHBOARD</a>
+                    <a class="link" href="test-bank.html">QUESTION BANK</a>
+                    <a class="link" href="profile.html">PROFILE</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            } else if (user.role === 'STUDENT') {
+                navBar.innerHTML = `
+                    <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
+                    <a class="link" href="subjects.html">MOCK EXAMS</a>
+                    <a class="link" href="generator.html">GENERATOR</a>
+                    <a class="link" href="exam-history.html">HISTORY</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            }
+        });
+
+        // Practice is open to Guests
+        function startPractice(domain) {
+            const exam = CpedleDB.generateExam({ count: 5, timeMinutes: 20, domain: domain, mode: 'practice' });
+            if (!exam.questions.length) {
+                alert('No questions are available for this discipline yet. The question bank is still being prepared.');
+                return;
+            }
+            window.location.href = 'exam.html';
+        }
+
+        // Saved mock exams require a Student account; Admins can preview them.
+        function startMock(domain) {
+            const user = CpedleDB.getCurrentUser();
+            if (user.role === 'GUEST') {
+                const signup = confirm('Saved mock exams require a Student account.\n\nWould you like to sign up now?');
+                if (signup) {
+                    window.location.href = 'signup.html';
+                }
+                return;
+            }
+            if (user.role === 'EXAMINER') {
+                window.location.href = 'examiner-dashboard.html';
+                return;
+            }
+            const exam = CpedleDB.generateExam({ count: 10, timeMinutes: 60, domain: domain });
+            if (!exam.questions.length) {
+                alert('No questions are available for this discipline yet. The question bank is still being prepared.');
+                return;
+            }
+            window.location.href = 'exam.html';
+        }
+
+        function goToGenerator() {
+            const user = CpedleDB.getCurrentUser();
+            if (user.role === 'GUEST') {
+                const signup = confirm('The Custom Exam Generator is a Student feature.\n\nSign up to unlock custom difficulty profiles and topic builders!');
+                if (signup) window.location.href = 'signup.html';
+                return;
+            }
+            if (user.role === 'EXAMINER') {
+                window.location.href = 'examiner-dashboard.html';
+                return;
+            }
+            window.location.href = user.role === 'ADMIN' ? 'admin-generator.html' : 'generator.html';
+        }
+    </script>
+</body>
+</html>

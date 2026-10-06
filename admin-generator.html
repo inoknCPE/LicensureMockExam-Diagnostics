@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Exam Generator | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <script>
+        enforceRoleGuard(['ADMIN']);
+    </script>
+
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-generator.html">GENERATOR</a>
+                <a class="link" href="admin-requests.html">REQUESTS</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--gray-text); padding: 0 12px 8px; letter-spacing: 0.5px;">Navigation</span>
+            <a href="admin-dashboard.html" class="admin-nav-item">📊 Dashboard Overview</a>
+            <a href="test-bank.html" class="admin-nav-item">📚 Test Bank Manager</a>
+            <a href="admin-generator.html" class="admin-nav-item active">⚙ Exam Generation Panel</a>
+            <a href="admin-requests.html" class="admin-nav-item">📥 Examinee Requests</a>
+            <a href="admin-accounts.html" class="admin-nav-item">👤 Accounts & Roles</a>
+            <hr class="footer-divider" style="margin: 15px 0;">
+            <a href="subjects.html" class="admin-nav-item">👀 Examinee Preview</a>
+            <button class="admin-nav-item" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer;" onclick="CpedleDB.logout()">🚪 Log Out</button>
+        </aside>
+
+        <main class="admin-main">
+            <div style="margin-bottom: 30px;">
+                <h1 style="font-size: 2.2rem;">Mock Exam Generation Engine</h1>
+                <p style="color: var(--gray-text); font-size: 0.95rem;">Assemble custom mock exams with precise difficulty ratios and real-time bank inventory validation.</p>
+            </div>
+
+            <div class="split-layout">
+                <!-- Controls Form -->
+                <div>
+                    <div class="card" style="padding: 32px;">
+                        <form id="admin-gen-form">
+                            <div class="form-group">
+                                <label for="adm-domain">Target Discipline or Domain</label>
+                                <select id="adm-domain" data-taxonomy="domains" data-include-disciplines="true" onchange="validateInventory()">
+                                    <option value="All">All Domains (Comprehensive CpE)</option>
+                                </select>
+                            </div>
+
+                            <div class="split-layout" style="gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label for="adm-count">Target Question Count</label>
+                                    <input type="number" id="adm-count" value="10" min="5" max="100" required oninput="validateInventory()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="adm-time">Time Limit (Minutes)</label>
+                                    <input type="number" id="adm-time" value="60" min="10" max="360" required>
+                                </div>
+                            </div>
+
+                            <!-- Difficulty Presets -->
+                            <div class="form-group">
+                                <label>Target Difficulty Profile</label>
+                                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                                    <button type="button" class="btn-outline-pill diff-preset" data-e="60" data-m="30" data-h="10" onclick="applyAdminPreset(this)">Easy</button>
+                                    <button type="button" class="btn-solid-pill diff-preset active-preset" data-e="30" data-m="50" data-h="20" onclick="applyAdminPreset(this)">Standard (30/50/20)</button>
+                                    <button type="button" class="btn-outline-pill diff-preset" data-e="10" data-m="30" data-h="60" onclick="applyAdminPreset(this)">Hard</button>
+                                </div>
+                            </div>
+
+                            <!-- Custom Difficulty Checkbox -->
+                            <div style="margin: 20px 0;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                                    <input type="checkbox" id="adm-chk-custom" onchange="toggleAdminCustomSliders()">
+                                    Custom Difficulty Ratio (%)
+                                </label>
+                            </div>
+
+                            <!-- 3 Sliders -->
+                            <div id="adm-sliders-panel" style="display: none; background: var(--bg); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--navy);">Difficulty Allocation Sliders:</span>
+                                    <span id="adm-slider-badge" style="font-size: 0.8rem; font-weight: 700; color: var(--teal);">Total: 100% (Balanced)</span>
+                                </div>
+
+                                <div style="margin-bottom: 12px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                                        <span>Easy: <strong id="adm-val-easy">30</strong>%</span>
+                                    </div>
+                                    <input type="range" id="adm-slider-easy" min="0" max="100" value="30" style="width: 100%;" oninput="balanceAdminSliders('easy')">
+                                </div>
+
+                                <div style="margin-bottom: 12px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                                        <span>Medium: <strong id="adm-val-med">50</strong>%</span>
+                                    </div>
+                                    <input type="range" id="adm-slider-med" min="0" max="100" value="50" style="width: 100%;" oninput="balanceAdminSliders('med')">
+                                </div>
+
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                                        <span>Hard: <strong id="adm-val-hard">20</strong>%</span>
+                                    </div>
+                                    <input type="range" id="adm-slider-hard" min="0" max="100" value="20" style="width: 100%;" oninput="balanceAdminSliders('hard')">
+                                </div>
+                            </div>
+
+                            <div id="inventory-warning" style="display: none; background: rgba(255, 107, 107, 0.15); border-left: 3px solid var(--coral); color: var(--coral); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px;"></div>
+
+                            <button type="submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1rem;">Generate Mock Exam Set →</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Preview Box -->
+                <div>
+                    <h3 style="font-size: 1.3rem; margin-bottom: 15px;">Target Test Bank Inventory</h3>
+                    <div class="card" style="padding: 24px;">
+                        <div id="inventory-breakdown">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let admEasy = 30;
+        let admMed = 50;
+        let admHard = 20;
+
+        function applyAdminPreset(btn) {
+            document.querySelectorAll('.diff-preset').forEach(b => {
+                b.className = 'btn-outline-pill diff-preset';
+            });
+            btn.className = 'btn-solid-pill diff-preset active-preset';
+
+            admEasy = parseInt(btn.dataset.e);
+            admMed = parseInt(btn.dataset.m);
+            admHard = parseInt(btn.dataset.h);
+
+            document.getElementById('adm-slider-easy').value = admEasy;
+            document.getElementById('adm-slider-med').value = admMed;
+            document.getElementById('adm-slider-hard').value = admHard;
+            syncAdminLabels();
+            validateInventory();
+        }
+
+        function toggleAdminCustomSliders() {
+            const panel = document.getElementById('adm-sliders-panel');
+            panel.style.display = document.getElementById('adm-chk-custom').checked ? 'block' : 'none';
+        }
+
+        function syncAdminLabels() {
+            document.getElementById('adm-val-easy').innerText = admEasy;
+            document.getElementById('adm-val-med').innerText = admMed;
+            document.getElementById('adm-val-hard').innerText = admHard;
+            const sum = admEasy + admMed + admHard;
+            const badge = document.getElementById('adm-slider-badge');
+            badge.innerText = `Total: ${sum}% (${sum === 100 ? 'Balanced' : 'Adjusting...'})`;
+            badge.style.color = sum === 100 ? 'var(--teal)' : 'var(--coral)';
+        }
+
+        function balanceAdminSliders(changed) {
+            admEasy = parseInt(document.getElementById('adm-slider-easy').value);
+            admMed = parseInt(document.getElementById('adm-slider-med').value);
+            admHard = parseInt(document.getElementById('adm-slider-hard').value);
+
+            let sum = admEasy + admMed + admHard;
+            if (sum !== 100) {
+                const diff = 100 - sum;
+                if (changed === 'easy') {
+                    admMed = Math.max(0, admMed + diff);
+                    document.getElementById('adm-slider-med').value = admMed;
+                } else if (changed === 'med') {
+                    admHard = Math.max(0, admHard + diff);
+                    document.getElementById('adm-slider-hard').value = admHard;
+                } else {
+                    admEasy = Math.max(0, admEasy + diff);
+                    document.getElementById('adm-slider-easy').value = admEasy;
+                }
+            }
+            syncAdminLabels();
+            validateInventory();
+        }
+
+        function validateInventory() {
+            const domain = document.getElementById('adm-domain').value;
+            const targetCount = parseInt(document.getElementById('adm-count').value) || 0;
+            const bank = CpedleDB.getQuestions();
+            const pool = domain === 'All' ? bank : bank.filter(q =>
+                q.domain === domain || (DISCIPLINES[domain] && DISCIPLINES[domain].includes(q.domain)));
+
+            const easyCount = pool.filter(q => q.difficulty.toLowerCase() === 'easy').length;
+            const medCount = pool.filter(q => q.difficulty.toLowerCase() === 'medium').length;
+            const hardCount = pool.filter(q => q.difficulty.toLowerCase() === 'hard').length;
+
+            const neededEasy = Math.round((admEasy / 100) * targetCount);
+            const neededMed = Math.round((admMed / 100) * targetCount);
+            const neededHard = targetCount - neededEasy - neededMed;
+
+            const breakdown = document.getElementById('inventory-breakdown');
+            breakdown.innerHTML = `
+                <div style="margin-bottom: 12px; font-size: 0.9rem;">Available in Domain Pool: <strong>${pool.length} items</strong></div>
+                <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Easy items available: <strong>${easyCount}</strong></span>
+                        <span>(Requested: <strong>${neededEasy}</strong>)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Medium items available: <strong>${medCount}</strong></span>
+                        <span>(Requested: <strong>${neededMed}</strong>)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Hard items available: <strong>${hardCount}</strong></span>
+                        <span>(Requested: <strong>${neededHard}</strong>)</span>
+                    </div>
+                </div>
+            `;
+
+            const warning = document.getElementById('inventory-warning');
+            if (targetCount > pool.length) {
+                warning.style.display = 'block';
+                warning.innerText = `The requested count (${targetCount}) exceeds available items in this pool (${pool.length}). The generated exam will use only available questions.`;
+            } else if (neededHard > hardCount || neededMed > medCount || neededEasy > easyCount) {
+                warning.style.display = 'block';
+                warning.innerText = `Notice: Some difficulty strata are under-resourced. The engine will automatically backfill from available items.`;
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        document.getElementById('admin-gen-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const domain = document.getElementById('adm-domain').value;
+            const count = parseInt(document.getElementById('adm-count').value);
+            const timeMinutes = parseInt(document.getElementById('adm-time').value);
+
+            const exam = CpedleDB.generateExam({
+                domain,
+                count,
+                timeMinutes,
+                easyPct: admEasy,
+                medPct: admMed,
+                hardPct: admHard
+            });
+
+            if (!exam.questions.length) {
+                alert('No questions are available for this selection yet.');
+                return;
+            }
+            alert(`Mock Exam Set created with ${exam.questions.length} available item(s), ${timeMinutes} mins. Redirecting to the test runner.`);
+            window.location.href = 'exam.html';
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => { await CpedleDB.ready; validateInventory(); });
+    </script>
+</body>
+</html>

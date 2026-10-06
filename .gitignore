@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local licensure web prototype
+data/
+app_logging/
+*.db
+*.sqlite3
+.setup-complete

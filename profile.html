@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your Profile | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+</head>
+<body>
+    <nav class="new-nav"><div class="nav__content">
+        <a class="nav-logo-box" href="index.html"><span>cpedle</span></a>
+        <div class="nav__options"><button class="link" onclick="CpedleDB.logout()">LOGOUT</button></div>
+    </div></nav>
+    <div class="auth-wrapper"><div class="card auth-card">
+        <h1>Personalize Your Profile</h1>
+        <p class="text-center" style="color:var(--gray-text); margin-bottom:20px;">Your role is assigned by the system or administrator. Choose your Computer Engineering discipline.</p>
+        <form id="profile-form">
+            <div class="form-group"><label for="profile-name">Full name</label>
+                <input id="profile-name" type="text" minlength="2" maxlength="100" required autocomplete="name"></div>
+            <div class="form-group"><label for="profile-role">Access role</label>
+                <input id="profile-role" type="text" readonly></div>
+            <div class="form-group"><label for="profile-discipline">Discipline</label>
+                <select id="profile-discipline" required><option value="">Select your discipline</option></select></div>
+            <p id="profile-error" role="alert" style="color:var(--coral)"></p>
+            <button class="btn-solid-pill" type="submit">Save Profile</button>
+        </form>
+    </div></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const user = CpedleDB.getCurrentUser();
+            if (user.role === 'GUEST') {
+                window.location.href = 'login.html';
+                return;
+            }
+            document.getElementById('profile-name').value = user.name || '';
+            document.getElementById('profile-role').value = user.role;
+            const select = document.getElementById('profile-discipline');
+            Object.keys(DISCIPLINES).forEach(discipline => {
+                const option = document.createElement('option');
+                option.value = option.textContent = discipline;
+                select.appendChild(option);
+            });
+            select.value = user.discipline || '';
+        });
+        document.getElementById('profile-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                const user = await CpedleDB.saveProfile(
+                    document.getElementById('profile-name').value.trim(),
+                    document.getElementById('profile-discipline').value
+                );
+                window.location.href = user.role === 'ADMIN' ? 'admin-dashboard.html' :
+                    user.role === 'EXAMINER' ? 'examiner-dashboard.html' : 'examinee-dashboard.html';
+            } catch (error) {
+                document.getElementById('profile-error').textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Generator | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <script>
+        enforceRoleGuard(['STUDENT', 'ADMIN']);
+    </script>
+
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
+                <a class="link" href="subjects.html">MOCK EXAMS</a>
+                <a class="link" href="generator.html">GENERATOR</a>
+                <a class="link" href="exam-history.html">HISTORY</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <section class="section-padding container" style="max-width: 840px;">
+        <div class="card" style="padding: 40px;">
+            <h1 class="text-center" style="font-size: 2.3rem;">Build a Custom Mock Exam</h1>
+            <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 600px;">Tailor the question pool, time limits, and difficulty distribution to your Computer Engineering review focus.</p>
+
+            <form id="gen-form">
+                <!-- Domain Selection -->
+                <div class="form-group">
+                    <label for="gen-domain">Computer Engineering Discipline or Domain</label>
+                    <select id="gen-domain" data-taxonomy="domains" data-include-disciplines="true">
+                        <option value="All">All Disciplines (Comprehensive Simulation)</option>
+                    </select>
+                </div>
+
+                <!-- Parameters Grid -->
+                <div class="split-layout" style="gap: 20px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label for="gen-count">Target Question Count</label>
+                        <select id="gen-count">
+                            <option value="5">5 Questions (Speed Drill)</option>
+                            <option value="10" selected>10 Questions (Standard Mock)</option>
+                            <option value="20">20 Questions (In-Depth Simulation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-time">Time Allocation (Minutes)</label>
+                        <input type="number" id="gen-time" value="45" min="5" max="300" required>
+                    </div>
+                </div>
+
+                <!-- Difficulty Presets -->
+                <div class="form-group">
+                    <label>Target Difficulty Profile</label>
+                    <div style="display: flex; gap: 10px; margin-top: 6px;">
+                        <button type="button" class="btn-outline-pill diff-preset" data-e="60" data-m="30" data-h="10" onclick="applyPreset(this)">Easy (60/30/10)</button>
+                        <button type="button" class="btn-solid-pill diff-preset active-preset" data-e="30" data-m="50" data-h="20" onclick="applyPreset(this)">Standard (30/50/20)</button>
+                        <button type="button" class="btn-outline-pill diff-preset" data-e="10" data-m="30" data-h="60" onclick="applyPreset(this)">Hard (10/30/60)</button>
+                    </div>
+                </div>
+
+                <!-- Custom Difficulty Toggle -->
+                <div style="margin: 20px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                        <input type="checkbox" id="chk-custom" onchange="toggleCustomSliders()">
+                        Enable Custom Difficulty % Mix
+                    </label>
+                </div>
+
+                <!-- 3 Linked Sliders -->
+                <div id="custom-sliders-panel" style="display: none; background: var(--bg); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--navy);">Difficulty Allocation Sliders:</span>
+                        <span id="slider-sum-badge" style="font-size: 0.8rem; font-weight: 700; color: var(--teal);">Total: 100% (Balanced)</span>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span>Easy: <strong id="val-easy">30</strong>%</span>
+                        </div>
+                        <input type="range" id="slider-easy" min="0" max="100" value="30" style="width: 100%;" oninput="balanceSliders('easy')">
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span>Medium: <strong id="val-med">50</strong>%</span>
+                        </div>
+                        <input type="range" id="slider-med" min="0" max="100" value="50" style="width: 100%;" oninput="balanceSliders('med')">
+                    </div>
+
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span>Hard: <strong id="val-hard">20</strong>%</span>
+                        </div>
+                        <input type="range" id="slider-hard" min="0" max="100" value="20" style="width: 100%;" oninput="balanceSliders('hard')">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Generate Mock Exam Set →</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="faq.html">FAQ & Help</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="subjects.html">CpE Disciplines</a>
+                    <a href="login.html">Examinee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <a href="generator.html">Exam Generator</a>
+                    <a href="exam-history.html">Score Reports</a>
+                    <a href="remediation.html">Remediation Exams</a>
+                    <a href="test-bank.html">Admin Test Bank</a>
+                </div>
+            </div>
+            <div class="footer-programs">
+                <div class="trust-badges small">
+                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-bottom">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                info@cpedle.com
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let currentEasy = 30;
+        let currentMed = 50;
+        let currentHard = 20;
+
+        function applyPreset(btn) {
+            document.querySelectorAll('.diff-preset').forEach(b => {
+                b.className = 'btn-outline-pill diff-preset';
+            });
+            btn.className = 'btn-solid-pill diff-preset active-preset';
+
+            currentEasy = parseInt(btn.dataset.e);
+            currentMed = parseInt(btn.dataset.m);
+            currentHard = parseInt(btn.dataset.h);
+
+            document.getElementById('slider-easy').value = currentEasy;
+            document.getElementById('slider-med').value = currentMed;
+            document.getElementById('slider-hard').value = currentHard;
+            syncLabels();
+        }
+
+        function toggleCustomSliders() {
+            const panel = document.getElementById('custom-sliders-panel');
+            panel.style.display = document.getElementById('chk-custom').checked ? 'block' : 'none';
+        }
+
+        function syncLabels() {
+            document.getElementById('val-easy').innerText = currentEasy;
+            document.getElementById('val-med').innerText = currentMed;
+            document.getElementById('val-hard').innerText = currentHard;
+            const sum = currentEasy + currentMed + currentHard;
+            const badge = document.getElementById('slider-sum-badge');
+            badge.innerText = `Total: ${sum}% (${sum === 100 ? 'Balanced' : 'Adjusting...'})`;
+            badge.style.color = sum === 100 ? 'var(--teal)' : 'var(--coral)';
+        }
+
+        function balanceSliders(changed) {
+            currentEasy = parseInt(document.getElementById('slider-easy').value);
+            currentMed = parseInt(document.getElementById('slider-med').value);
+            currentHard = parseInt(document.getElementById('slider-hard').value);
+
+            let sum = currentEasy + currentMed + currentHard;
+            if (sum !== 100) {
+                const diff = 100 - sum;
+                if (changed === 'easy') {
+                    currentMed = Math.max(0, currentMed + diff);
+                    document.getElementById('slider-med').value = currentMed;
+                } else if (changed === 'med') {
+                    currentHard = Math.max(0, currentHard + diff);
+                    document.getElementById('slider-hard').value = currentHard;
+                } else {
+                    currentEasy = Math.max(0, currentEasy + diff);
+                    document.getElementById('slider-easy').value = currentEasy;
+                }
+            }
+            syncLabels();
+        }
+
+        document.getElementById('gen-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const count = parseInt(document.getElementById('gen-count').value);
+            const timeMinutes = parseInt(document.getElementById('gen-time').value);
+            const domain = document.getElementById('gen-domain').value;
+
+            const exam = CpedleDB.generateExam({
+                count,
+                timeMinutes,
+                domain,
+                easyPct: currentEasy,
+                medPct: currentMed,
+                hardPct: currentHard
+            });
+
+            if (!exam.questions.length) {
+                alert('No questions are available for this selection yet.');
+                return;
+            }
+            window.location.href = 'exam.html';
+        });
+    </script>
+</body>
+</html>

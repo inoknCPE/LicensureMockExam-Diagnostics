@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examinee Requests | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <script>
+        enforceRoleGuard(['ADMIN']);
+    </script>
+
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-generator.html">GENERATOR</a>
+                <a class="link" href="admin-requests.html">REQUESTS</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--gray-text); padding: 0 12px 8px; letter-spacing: 0.5px;">Navigation</span>
+            <a href="admin-dashboard.html" class="admin-nav-item">📊 Dashboard Overview</a>
+            <a href="test-bank.html" class="admin-nav-item">📚 Test Bank Manager</a>
+            <a href="admin-generator.html" class="admin-nav-item">⚙ Exam Generation Panel</a>
+            <a href="admin-requests.html" class="admin-nav-item active">📥 Examinee Requests</a>
+            <a href="admin-accounts.html" class="admin-nav-item">👤 Accounts & Roles</a>
+            <hr class="footer-divider" style="margin: 15px 0;">
+            <a href="subjects.html" class="admin-nav-item">👀 Examinee Preview</a>
+            <button class="admin-nav-item" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer;" onclick="CpedleDB.logout()">🚪 Log Out</button>
+        </aside>
+
+        <main class="admin-main">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h1 style="font-size: 2.2rem;">Mock Exam Request Review Queue</h1>
+                    <p style="color: var(--gray-text); font-size: 0.95rem;">Review examinee test set suggestions. Approved requests can be immediately turned into mock exams.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <select id="request-filter" onchange="renderAdminRequests()" style="padding: 10px 16px; border-radius: 50px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 500;">
+                        <option value="All">All Requests</option>
+                        <option value="Pending" selected>Pending Review</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="admin-requests-list" style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Populated dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function renderAdminRequests() {
+            const container = document.getElementById('admin-requests-list');
+            const filter = document.getElementById('request-filter').value;
+            let reqs = CpedleDB.getRequests();
+
+            if (filter !== 'All') {
+                reqs = reqs.filter(r => r.status === filter);
+            }
+
+            if (reqs.length === 0) {
+                container.innerHTML = `
+                    <div class="card" style="padding: 40px; text-align: center; color: var(--gray-text);">
+                        No requests found under filter: <strong>${filter}</strong>.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            reqs.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '24px';
+
+                let badgeColor = '#D97706';
+                let badgeBg = 'rgba(245, 158, 11, 0.15)';
+                if (r.status === 'Approved') {
+                    badgeColor = 'var(--teal)';
+                    badgeBg = 'rgba(46, 196, 182, 0.15)';
+                } else if (r.status === 'Rejected') {
+                    badgeColor = 'var(--coral)';
+                    badgeBg = 'rgba(255, 107, 107, 0.15)';
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: var(--teal); letter-spacing: 0.5px;">${r.id} • ${escapeHtml(r.domain)}</span>
+                            <h3 style="font-style: normal; font-size: 1.25rem; margin: 4px 0;">${escapeHtml(r.title)}</h3>
+                            <span style="font-size: 0.85rem; color: var(--gray-text);">Candidate: <strong>${escapeHtml(r.examineeName)}</strong> • Target Difficulty: <strong>${r.difficulty}</strong> • ${r.timestamp}</span>
+                        </div>
+                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; color: ${badgeColor}; background: ${badgeBg};">${r.status}</span>
+                    </div>
+
+                    <div style="background: var(--bg); padding: 14px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem; color: var(--text);">
+                        <strong>Examinee Notes:</strong> ${escapeHtml(r.notes || 'None provided.')}
+                    </div>
+
+                    ${r.adminComment ? `
+                        <div style="font-size: 0.85rem; color: var(--gray-text); margin-bottom: 15px;">
+                            <strong>Admin Feedback:</strong> ${escapeHtml(r.adminComment)}
+                        </div>
+                    ` : ''}
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; gap: 10px;">
+                            ${r.status === 'Pending' ? `
+                                <button type="button" class="btn-solid-pill" style="font-size: 0.85rem; padding: 6px 18px;" onclick="approveRequest('${r.id}')">✓ Approve</button>
+                                <button type="button" class="btn-outline-pill" style="font-size: 0.85rem; padding: 6px 18px; color: var(--coral); border-color: var(--coral);" onclick="rejectRequest('${r.id}')">✕ Reject</button>
+                            ` : `
+                                <button type="button" class="btn-outline-pill" style="font-size: 0.85rem; padding: 6px 14px;" onclick="reopenRequest('${r.id}')">Reset to Pending</button>
+                            `}
+                        </div>
+                        ${r.status === 'Approved' ? `
+                            <button type="button" class="btn-solid-pill coral-btn" style="font-size: 0.85rem; padding: 6px 18px;" onclick="turnIntoExam('${escapeHtml(r.domain)}')">Generate Mock From Request →</button>
+                        ` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function approveRequest(id) {
+            const comment = prompt('Optional Admin Approval Note:', 'Approved for Computer Engineering mock bank creation.');
+            try {
+                await CpedleDB.updateRequestStatus(id, 'Approved', comment || '');
+                renderAdminRequests();
+            } catch (error) { alert(error.message); }
+        }
+
+        async function rejectRequest(id) {
+            const comment = prompt('Reason for rejection:', 'Insufficient specific problem context.');
+            try {
+                await CpedleDB.updateRequestStatus(id, 'Rejected', comment || '');
+                renderAdminRequests();
+            } catch (error) { alert(error.message); }
+        }
+
+        async function reopenRequest(id) {
+            try {
+                await CpedleDB.updateRequestStatus(id, 'Pending', '');
+                renderAdminRequests();
+            } catch (error) { alert(error.message); }
+        }
+
+        function turnIntoExam(domain) {
+            const exam = CpedleDB.generateExam({ count: 10, timeMinutes: 60, domain });
+            if (!exam.questions.length) {
+                alert('No questions are available for this domain yet.');
+                return;
+            }
+            alert('Generating a mock exam from the selected domain.');
+            window.location.href = 'exam.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => { await CpedleDB.ready; renderAdminRequests(); });
+    </script>
+</body>
+</html>

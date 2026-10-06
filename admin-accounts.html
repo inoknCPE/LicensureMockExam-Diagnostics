@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accounts & Roles | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+</head>
+<body>
+    <nav class="new-nav"><div class="nav__content">
+        <a class="nav-logo-box" href="admin-dashboard.html"><span>cpedle Admin</span></a>
+        <div class="nav__options">
+            <a class="link" href="admin-dashboard.html">DASHBOARD</a>
+            <a class="link" href="test-bank.html">QUESTION BANK</a>
+            <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+        </div>
+    </div></nav>
+    <section class="section-padding container">
+        <h1>Accounts, Roles & Locked Users</h1>
+        <p>New registrations receive the Student role. Only an administrator can grant Examiner or Admin access.</p>
+        <p id="admin-message" role="status" aria-live="polite"></p>
+        <div class="table-responsive" style="margin:24px 0">
+            <table class="cpedle-table">
+                <thead><tr><th>Username</th><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="accounts-body"></tbody>
+            </table>
+        </div>
+        <h2>Pending Password Requests</h2>
+        <p>Confirm the person's identity outside this prototype before approving a reset. Email verification is not yet implemented.</p>
+        <div class="table-responsive">
+            <table class="cpedle-table">
+                <thead><tr><th>Username</th><th>Email</th><th>Requested</th><th>Action</th></tr></thead>
+                <tbody id="resets-body"></tbody>
+            </table>
+        </div>
+    </section>
+    <script>
+        const message = document.getElementById('admin-message');
+        function cell(row, value) {
+            const td = document.createElement('td');
+            td.textContent = value == null ? '' : String(value);
+            row.appendChild(td);
+            return td;
+        }
+        async function action(callback) {
+            try {
+                await callback();
+                message.textContent = 'Saved.';
+                message.style.color = '#16803d';
+                await loadAdminAccounts();
+            } catch (error) {
+                message.textContent = error.message;
+                message.style.color = '#c62828';
+            }
+        }
+        async function loadAdminAccounts() {
+            const [users, resets] = await Promise.all([
+                apiCall('/admin/users'), apiCall('/admin/reset-requests')
+            ]);
+            const accountsBody = document.getElementById('accounts-body');
+            accountsBody.replaceChildren();
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                cell(row, user.username);
+                cell(row, user.email);
+                cell(row, user.name || '—');
+                const roleCell = document.createElement('td');
+                const select = document.createElement('select');
+                for (const role of ['STUDENT', 'EXAMINER', 'ADMIN']) {
+                    const option = document.createElement('option');
+                    option.value = option.textContent = role;
+                    select.appendChild(option);
+                }
+                select.value = user.role;
+                select.disabled = user.id === CpedleDB.getCurrentUser().id;
+                select.addEventListener('change', () => action(async () => {
+                    await apiCall('/admin/users/' + user.id + '/role', {
+                        method: 'PATCH', body: JSON.stringify({ role: select.value })
+                    });
+                }));
+                roleCell.appendChild(select);
+                row.appendChild(roleCell);
+                cell(row, user.is_locked ? 'Locked' : 'Active');
+                const actionCell = document.createElement('td');
+                if (user.is_locked) {
+                    const unlock = document.createElement('button');
+                    unlock.type = 'button';
+                    unlock.className = 'btn-outline-pill';
+                    unlock.textContent = 'Unlock';
+                    unlock.addEventListener('click', () => action(() =>
+                        apiCall('/admin/users/' + user.id + '/unlock', { method: 'POST' })
+                    ));
+                    actionCell.appendChild(unlock);
+                }
+                row.appendChild(actionCell);
+                accountsBody.appendChild(row);
+            });
+            const resetsBody = document.getElementById('resets-body');
+            resetsBody.replaceChildren();
+            resets.forEach(reset => {
+                const row = document.createElement('tr');
+                cell(row, reset.username);
+                cell(row, reset.email);
+                cell(row, reset.requested_at);
+                const actionCell = document.createElement('td');
+                for (const [label, approve] of [['Approve', true], ['Reject', false]]) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn-outline-pill';
+                    button.textContent = label;
+                    button.style.marginRight = '8px';
+                    button.addEventListener('click', () => action(() =>
+                        apiCall('/admin/reset-requests/' + reset.id + '/decision', {
+                            method: 'POST', body: JSON.stringify({ approve })
+                        })
+                    ));
+                    actionCell.appendChild(button);
+                }
+                row.appendChild(actionCell);
+                resetsBody.appendChild(row);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            try { await loadAdminAccounts(); }
+            catch (error) { message.textContent = error.message; message.style.color = '#c62828'; }
+        });
+    </script>
+</body>
+</html>
