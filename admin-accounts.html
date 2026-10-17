@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts & Roles | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .admin-page-header {
+            margin-bottom: 32px;
+        }
+        .admin-page-header h1 {
+            font-size: 2.5rem;
+            line-height: 1.15;
+            margin-bottom: 8px;
+        }
+        .admin-page-header p {
+            color: var(--gray-text);
+            font-size: 0.95rem;
+            max-width: 650px;
+        }
+        .admin-section-title {
+            font-size: 1.8rem;
+            margin-top: 48px;
+            margin-bottom: 16px;
+        }
+        .cpedle-table th, .cpedle-table td {
+            padding: 14px 20px;
+            vertical-align: middle;
+        }
+        .cpedle-table select {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .cpedle-table select:focus {
+            border-color: var(--teal);
+        }
+        .table-card-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="admin-nav-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-generator.html">GENERATOR</a>
+                <a class="link" href="admin-requests.html">REQUESTS</a>
+                <a class="link" href="admin-accounts.html" style="color: var(--teal); font-weight: 700;">ACCOUNTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- MAIN CONTENT -->
+    <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
+        <div class="container">
+            <!-- HEADER BLOCK -->
+            <div class="admin-page-header">
+                <h1 class="serif-heading">Accounts, Roles & Locked Users</h1>
+                <p>New registrations default to Student role. Only an administrator can grant Examiner or Admin privileges.</p>
+            </div>
+
+            <!-- ACCOUNTS TABLE -->
+            <div class="table-card-wrapper">
+                <div class="table-responsive" style="margin-top: 0;">
+                    <table class="cpedle-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th style="width: 150px;">Role</th>
+                                <th style="width: 120px;">Status</th>
+                                <th style="width: 120px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <!-- Rendered dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PASSWORD RESET REQUESTS -->
+            <h2 class="serif-heading admin-section-title">Pending Password Reset Requests</h2>
+            <div class="table-card-wrapper">
+                <div class="table-responsive" style="margin-top: 0;">
+                    <table class="cpedle-table">
+                        <thead>
+                            <tr>
+                                <th>Username / Email</th>
+                                <th>Requested At</th>
+                                <th style="width: 200px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resets-tbody">
+                            <!-- Rendered dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review • Administrator Portal
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['ADMIN']);
+            await loadAccountsData();
+        });
+
+        async function loadAccountsData() {
+            let users = [];
+            let pendingResets = [];
+
+            try {
+                users = await apiCall('/admin/accounts');
+            } catch (e) {
+                const current = CpedleDB.getCurrentUser();
+                users = [
+                    { id: current.id || '1', username: current.username || 'adminuser', email: current.email || 'admin@example.com', name: current.name || 'ChosenAdmin', role: current.role || 'ADMIN', locked: false }
+                ];
+            }
+
+            try {
+                pendingResets = await apiCall('/admin/resets');
+            } catch (e) {
+                pendingResets = [];
+            }
+
+            // Render User Accounts
+            const uTbody = document.getElementById('users-tbody');
+            uTbody.innerHTML = '';
+            if (!users || users.length === 0) {
+                uTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-text); padding:24px;">No registered accounts found.</td></tr>`;
+            } else {
+                users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 600; color: var(--navy);">${escapeHtml(u.username)}</td>
+                        <td style="color: var(--gray-text);">${escapeHtml(u.email)}</td>
+                        <td>${escapeHtml(u.name || u.username)}</td>
+                        <td>
+                            <select onchange="updateRole('${u.id}', this.value)">
+                                <option value="STUDENT" ${u.role === 'STUDENT' ? 'selected' : ''}>STUDENT</option>
+                                <option value="EXAMINER" ${u.role === 'EXAMINER' ? 'selected' : ''}>EXAMINER</option>
+                                <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
+                            </select>
+                        </td>
+                        <td><span class="deficiency-tag ${u.locked ? 'tag-deficient' : 'tag-proficient'}">${u.locked ? 'Locked' : 'Active'}</span></td>
+                        <td style="text-align: right;">
+                            ${u.locked ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
+                        </td>
+                    `;
+                    uTbody.appendChild(tr);
+                });
+            }
+
+            // Render Pending Resets
+            const rTbody = document.getElementById('resets-tbody');
+            rTbody.innerHTML = '';
+            if (!pendingResets || pendingResets.length === 0) {
+                rTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--gray-text); padding:24px;">No pending password reset requests.</td></tr>`;
+            } else {
+                pendingResets.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(r.username)}</strong> <span style="color:var(--gray-text);">(${escapeHtml(r.email)})</span></td>
+                        <td style="color: var(--gray-text); font-size: 0.85rem;">${escapeHtml(r.created_at || 'Recently')}</td>
+                        <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+                            <button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem; color: var(--coral); border-color: var(--coral);" onclick="decideReset('${r.id}', false)">Reject</button>
+                            <button class="btn-solid-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="decideReset('${r.id}', true)">Approve</button>
+                        </td>
+                    `;
+                    rTbody.appendChild(tr);
+                });
+            }
+        }
+
+        async function updateRole(userId, newRole) {
+            try {
+                await apiCall(`/admin/users/${userId}/role`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ role: newRole })
+                });
+                await loadAccountsData();
+            } catch (err) {
+                alert('Could not update role: ' + err.message);
+            }
+        }
+
+        async function unlockUser(userId) {
+            try {
+                await apiCall(`/admin/users/${userId}/unlock`, { method: 'POST' });
+                await loadAccountsData();
+            } catch (err) {
+                alert('Could not unlock user: ' + err.message);
+            }
+        }
+
+        async function decideReset(resetId, approve) {
+            try {
+                await apiCall(`/admin/resets/${resetId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ approve })
+                });
+                await loadAccountsData();
+            } catch (err) {
+                alert('Could not process reset: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

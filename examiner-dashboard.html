@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Examiner Dashboard | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+</head>
+<body>
+    <nav class="new-nav"><div class="nav__content">
+        <a class="nav-logo-box" href="index.html"><span>cpedle Examiner</span></a>
+        <div class="nav__options">
+            <a class="link" href="test-bank.html">QUESTION BANK</a>
+            <a class="link" href="profile.html">PROFILE</a>
+            <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+        </div>
+    </div></nav>
+    <section class="section-padding container">
+        <h1>Examiner Workspace</h1>
+        <p id="examiner-greeting" style="color:var(--gray-text)"></p>
+        <div class="card" style="margin-top:24px">
+            <h2>Question Bank</h2>
+            <p>Add, edit, import, and review questions using the assigned Computer Engineering domains.</p>
+            <p id="question-count"></p>
+            <a class="btn-solid-pill" href="test-bank.html">Manage Questions →</a>
+        </div>
+    </section>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const user = CpedleDB.getCurrentUser();
+            document.getElementById('examiner-greeting').textContent =
+                `${user.name || user.username} • ${user.discipline || 'No discipline selected'}`;
+            document.getElementById('question-count').textContent =
+                `${CpedleDB.getQuestions().length} question(s) currently in the bank.`;
+        });
+    </script>
+</body>
+</html>

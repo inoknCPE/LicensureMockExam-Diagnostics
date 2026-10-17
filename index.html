@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cpedle | Computer Engineering Review</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .hero-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 48px;
+        }
+        .hero-header h1 {
+            font-size: 3rem;
+            line-height: 1.15;
+            margin-top: 10px;
+        }
+        .hero-header p {
+            color: var(--gray-text);
+            font-size: 1.05rem;
+            margin-top: 12px;
+        }
+        .disciplines-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        @media (max-width: 1024px) {
+            .disciplines-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 640px) {
+            .disciplines-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .discipline-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .discipline-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px var(--shadow);
+        }
+        .discipline-card.featured {
+            border: 2px solid var(--teal);
+            background: linear-gradient(180deg, var(--surface) 0%, rgba(13, 148, 136, 0.03) 100%);
+        }
+        .discipline-badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            color: var(--teal);
+        }
+        .discipline-title {
+            font-size: 1.5rem;
+            margin: 6px 0 16px;
+            line-height: 1.2;
+            color: var(--navy);
+        }
+        .domain-list {
+            padding-left: 18px;
+            margin: 0 0 24px 0;
+            font-size: 0.88rem;
+            color: var(--gray-text);
+            line-height: 1.6;
+        }
+        .domain-list li {
+            margin-bottom: 6px;
+        }
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .card-actions button, .card-actions a {
+            flex: 1;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__options" id="user-nav-options">
+                <a class="link" href="#disciplines">SUBJECTS</a>
+                <a class="link" href="signup.html">SIGN UP</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- HERO SECTION -->
+    <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
+        <div class="container">
+            <div class="hero-header">
+                <span style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.85rem; font-weight: 700; color: var(--teal);">ACADEMIC MOCK EXAM ENGINE</span>
+                <h1 class="serif-heading">Computer Engineering Diagnostic Portal</h1>
+                <p>Explore the six Computer Engineering disciplines and their domains. Practice drills are open to guests; full mock exams are for registered examinees.</p>
+            </div>
+
+            <!-- DISCIPLINES GRID -->
+            <div id="disciplines" class="disciplines-grid">
+                
+                <!-- DISCIPLINE 1 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 1</span>
+                        <h2 class="serif-heading discipline-title">Network Engineer</h2>
+                        <ul class="domain-list">
+                            <li>Networking Fundamentals</li>
+                            <li>Data Communications & Protocols</li>
+                            <li>Routing and Switching</li>
+                            <li>Network Security</li>
+                            <li>Wireless & Network Technologies</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Network Engineer')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Network Engineer')">Mock Exam</button>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE 2 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 2</span>
+                        <h2 class="serif-heading discipline-title">Systems Operations</h2>
+                        <ul class="domain-list">
+                            <li>Operating System Fundamentals</li>
+                            <li>Process & Thread Management</li>
+                            <li>Memory Management</li>
+                            <li>File Systems and Storage</li>
+                            <li>I/O and System Management</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Systems Operations Engineer')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Systems Operations Engineer')">Mock Exam</button>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE 3 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 3</span>
+                        <h2 class="serif-heading discipline-title">Systems Architect</h2>
+                        <ul class="domain-list">
+                            <li>Computer Organization Fundamentals</li>
+                            <li>CPU & Instruction Set Architecture</li>
+                            <li>Memory Hierarchy and Cache</li>
+                            <li>I/O & Peripheral Organization</li>
+                            <li>Computer Arithmetic & Performance</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Computer Systems Architect')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Computer Systems Architect')">Mock Exam</button>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE 4 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 4</span>
+                        <h2 class="serif-heading discipline-title">Software Developer</h2>
+                        <ul class="domain-list">
+                            <li>Software Engineering Fundamentals</li>
+                            <li>Software Development Life Cycle</li>
+                            <li>Requirements Analysis & Spec</li>
+                            <li>Software Design & Architecture</li>
+                            <li>Software Testing & Maintenance</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Software Developer')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Software Developer')">Mock Exam</button>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE 5 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 5</span>
+                        <h2 class="serif-heading discipline-title">Algorithm Engineer</h2>
+                        <ul class="domain-list">
+                            <li>Algorithm Analysis & Complexity</li>
+                            <li>Linear Data Structures</li>
+                            <li>Non-Linear Data Structures</li>
+                            <li>Sorting and Searching Algorithms</li>
+                            <li>Algorithm Design Techniques</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Algorithm Engineer')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Algorithm Engineer')">Mock Exam</button>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE 6 -->
+                <div class="discipline-card">
+                    <div>
+                        <span class="discipline-badge">DISCIPLINE 6</span>
+                        <h2 class="serif-heading discipline-title">Digital Design</h2>
+                        <ul class="domain-list">
+                            <li>Boolean Algebra & Logic Gates</li>
+                            <li>Combinational Logic Circuits</li>
+                            <li>Sequential Logic Circuits</li>
+                            <li>Switching Theory & Minimization</li>
+                            <li>Digital System Design</li>
+                        </ul>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-outline-pill" onclick="startDrill('Digital Design Engineer')">Practice Drill</button>
+                        <button class="btn-solid-pill" onclick="startMock('Digital Design Engineer')">Mock Exam</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COMPREHENSIVE SIMULATION BANNER -->
+            <div class="discipline-card featured" style="padding: 32px; margin-bottom: 40px; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                <div style="max-width: 600px;">
+                    <span class="discipline-badge">ALL DISCIPLINES</span>
+                    <h2 class="serif-heading" style="font-size: 1.8rem; margin: 6px 0;">Comprehensive Computer Engineering Simulation</h2>
+                    <p style="color: var(--gray-text); font-size: 0.92rem; margin: 0;">Practice across all available domains in a single timed exam. Designed for comprehensive licensure test preparation.</p>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button class="btn-outline-pill" onclick="startDrill('All')">Sample Diagnostic</button>
+                    <button class="btn-solid-pill coral-btn" onclick="startMock('All')">Full Mock Exam</button>
+                </div>
+            </div>
+
+            <!-- BOTTOM PROMO CALLOUT -->
+            <div class="discipline-card" style="padding: 32px; text-align: center; border: 1px dashed var(--border); background: var(--surface); align-items: center;">
+                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 8px;">Looking for Custom Topic Combinations?</h2>
+                <p style="color: var(--gray-text); font-size: 0.95rem; margin-bottom: 20px; max-width: 600px;">Build a custom mock set with adjustable difficulty ratios and time limits using the Exam Generator.</p>
+                <button class="btn-solid-pill lg" onclick="handleCustomGeneratorAccess()">Open Custom Exam Generator →</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function startDrill(domain) {
+            CpedleDB.generateExam({ domain, count: 5, mode: 'drill', timeMinutes: 15 });
+            window.location.href = 'exam.html';
+        }
+
+        function startMock(domain) {
+            CpedleDB.generateExam({ domain, count: 10, mode: 'mock', timeMinutes: 30 });
+            window.location.href = 'exam.html';
+        }
+    </script>
+</body>
+</html>

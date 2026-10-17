@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bank | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .admin-page-header {
+            margin-bottom: 28px;
+        }
+        .admin-page-header h1 {
+            font-size: 2.5rem;
+            line-height: 1.15;
+            margin-bottom: 6px;
+        }
+        .admin-page-header p {
+            color: var(--gray-text);
+            font-size: 0.95rem;
+        }
+        .filter-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+        .filter-grid input, .filter-grid select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .filter-grid input:focus, .filter-grid select:focus {
+            border-color: var(--teal);
+        }
+        .table-card-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+        .cpedle-table th, .cpedle-table td {
+            padding: 16px 20px;
+            vertical-align: middle;
+        }
+        .action-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .btn-action-edit {
+            padding: 5px 14px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--navy);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-action-edit:hover {
+            border-color: var(--teal);
+            color: var(--teal);
+        }
+        .btn-action-del {
+            padding: 5px 14px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 107, 107, 0.4);
+            background: transparent;
+            color: var(--coral);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-action-del:hover {
+            background: rgba(255, 107, 107, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="admin-nav-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html" style="color: var(--teal); font-weight: 700;">TEST BANK</a>
+                <a class="link" href="admin-generator.html">GENERATOR</a>
+                <a class="link" href="admin-requests.html">REQUESTS</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- MAIN CONTENT -->
+    <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
+        <div class="container">
+            <!-- HEADER BLOCK -->
+            <div class="admin-page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <h1 class="serif-heading">Computer Engineering Test Bank</h1>
+                    <p>Curate, filter, and balance questions by Bloom's cognitive level and difficulty rating.</p>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <label class="btn-outline-pill" style="cursor: pointer; padding: 10px 20px;">
+                        📁 Bulk Import (JSON)
+                        <input type="file" id="json-import-input" accept=".json" style="display: none;" onchange="handleBulkImport(event)">
+                    </label>
+                    <button class="btn-solid-pill" onclick="openAddModal()">+ Add New Item</button>
+                </div>
+            </div>
+
+            <!-- FILTERS -->
+            <div class="filter-card">
+                <div class="filter-grid">
+                    <input type="text" id="search-input" placeholder="Search keywords..." oninput="renderTable()">
+                    <select id="domain-filter" data-taxonomy="domains" onchange="renderTable()">
+                        <option value="All">All Domains</option>
+                    </select>
+                    <select id="diff-filter" onchange="renderTable()">
+                        <option value="All">All Difficulties</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                    <select id="cog-filter" onchange="renderTable()">
+                        <option value="All">All Cognitive Levels</option>
+                        <option value="Remember">Remember</option>
+                        <option value="Understand">Understand</option>
+                        <option value="Apply">Apply</option>
+                        <option value="Analyze">Analyze</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="table-card-wrapper">
+                <div class="table-responsive" style="margin-top: 0;">
+                    <table class="cpedle-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Item ID</th>
+                                <th>Question Preview</th>
+                                <th>Domain</th>
+                                <th style="width: 130px;">Cognitive</th>
+                                <th style="width: 110px;">Difficulty</th>
+                                <th style="width: 130px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bank-tbody">
+                            <!-- Rendered dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- EDIT/ADD MODAL -->
+    <div id="item-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px;">
+        <div class="step-card" style="width: 100%; max-width: 650px; background: var(--surface); max-height: 90vh; overflow-y: auto; padding: 32px; border-radius: 16px;">
+            <h2 class="serif-heading" id="modal-title" style="font-size: 1.8rem; margin-bottom: 20px;">Add Test Item</h2>
+            <form id="item-form" onsubmit="saveItem(event)">
+                <input type="hidden" id="item-id">
+                <div class="form-group">
+                    <label>Question Text</label>
+                    <textarea id="item-q" rows="3" required></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div class="form-group"><label>Option A</label><input type="text" id="item-opt0" required></div>
+                    <div class="form-group"><label>Option B</label><input type="text" id="item-opt1" required></div>
+                    <div class="form-group"><label>Option C</label><input type="text" id="item-opt2" required></div>
+                    <div class="form-group"><label>Option D</label><input type="text" id="item-opt3" required></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+                    <div class="form-group">
+                        <label>Correct Key</label>
+                        <select id="item-ans" required>
+                            <option value="0">A</option><option value="1">B</option>
+                            <option value="2">C</option><option value="3">D</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Difficulty</label>
+                        <select id="item-diff" required>
+                            <option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cognitive Level</label>
+                        <select id="item-cog" required>
+                            <option value="Remember">Remember</option><option value="Understand">Understand</option>
+                            <option value="Apply">Apply</option><option value="Analyze">Analyze</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Domain</label>
+                    <select id="item-domain" data-taxonomy="domains" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Explanation (Optional)</label>
+                    <textarea id="item-exp" rows="2"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn-outline-pill" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-solid-pill">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review • Administrator Portal
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['ADMIN', 'EXAMINER']);
+            renderTable();
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('bank-tbody');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const domain = document.getElementById('domain-filter').value;
+            const diff = document.getElementById('diff-filter').value;
+            const cog = document.getElementById('cog-filter').value;
+
+            const items = CpedleDB.getQuestions().filter(q => {
+                const matchSearch = q.q.toLowerCase().includes(search) || q.id.toLowerCase().includes(search);
+                const matchDomain = domain === 'All' || q.domain === domain;
+                const matchDiff = diff === 'All' || q.difficulty === diff;
+                const matchCog = cog === 'All' || q.cognitive === cog;
+                return matchSearch && matchDomain && matchDiff && matchCog;
+            });
+
+            tbody.innerHTML = '';
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-text); padding:32px;">No questions found matching your filters.</td></tr>`;
+                return;
+            }
+
+            items.forEach(q => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: var(--navy);">${escapeHtml(q.id)}</td>
+                    <td>
+                        <div style="font-weight: 600; color: var(--text); margin-bottom: 4px; line-height: 1.4;">${escapeHtml(q.q)}</div>
+                        <div style="font-size: 0.8rem; color: var(--teal); font-weight: 600;">Key: ${['A','B','C','D'][q.ans]} (${escapeHtml(q.opts[q.ans])})</div>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--gray-text);">${escapeHtml(q.domain)}</td>
+                    <td><span class="badge-cog-${q.cognitive.toLowerCase()}">${escapeHtml(q.cognitive)}</span></td>
+                    <td><span class="badge-diff-${q.difficulty.toLowerCase()}">${escapeHtml(q.difficulty)}</span></td>
+                    <td>
+                        <div class="action-btn-group">
+                            <button class="btn-action-edit" onclick="editItem('${q.id}')">Edit</button>
+                            <button class="btn-action-del" onclick="deleteItem('${q.id}')">Del</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Add Test Item';
+            document.getElementById('item-id').value = '';
+            document.getElementById('item-q').value = '';
+            document.getElementById('item-opt0').value = '';
+            document.getElementById('item-opt1').value = '';
+            document.getElementById('item-opt2').value = '';
+            document.getElementById('item-opt3').value = '';
+            document.getElementById('item-ans').value = '0';
+            document.getElementById('item-diff').value = 'Easy';
+            document.getElementById('item-cog').value = 'Remember';
+            document.getElementById('item-exp').value = '';
+            document.getElementById('item-modal').style.display = 'flex';
+        }
+
+        function editItem(id) {
+            const q = CpedleDB.getQuestions().find(x => x.id === id);
+            if (!q) return;
+            document.getElementById('modal-title').textContent = 'Edit Test Item ' + id;
+            document.getElementById('item-id').value = q.id;
+            document.getElementById('item-q').value = q.q;
+            document.getElementById('item-opt0').value = q.opts[0] || '';
+            document.getElementById('item-opt1').value = q.opts[1] || '';
+            document.getElementById('item-opt2').value = q.opts[2] || '';
+            document.getElementById('item-opt3').value = q.opts[3] || '';
+            document.getElementById('item-ans').value = q.ans;
+            document.getElementById('item-diff').value = q.difficulty;
+            document.getElementById('item-cog').value = q.cognitive;
+            document.getElementById('item-domain').value = q.domain;
+            document.getElementById('item-exp').value = q.explanation || '';
+            document.getElementById('item-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('item-modal').style.display = 'none';
+        }
+
+        async function saveItem(e) {
+            e.preventDefault();
+            const data = {
+                id: document.getElementById('item-id').value,
+                q: document.getElementById('item-q').value,
+                opts: [
+                    document.getElementById('item-opt0').value,
+                    document.getElementById('item-opt1').value,
+                    document.getElementById('item-opt2').value,
+                    document.getElementById('item-opt3').value
+                ],
+                ans: parseInt(document.getElementById('item-ans').value, 10),
+                difficulty: document.getElementById('item-diff').value,
+                cognitive: document.getElementById('item-cog').value,
+                domain: document.getElementById('item-domain').value,
+                explanation: document.getElementById('item-exp').value
+            };
+            try {
+                await CpedleDB.saveQuestion(data);
+                closeModal();
+                renderTable();
+            } catch (err) {
+                alert('Failed to save question: ' + err.message);
+            }
+        }
+
+        async function deleteItem(id) {
+            if (confirm(`Are you sure you want to delete question ${id}?`)) {
+                try {
+                    await CpedleDB.deleteQuestion(id);
+                    renderTable();
+                } catch (err) {
+                    alert('Could not delete item: ' + err.message);
+                }
+            }
+        }
+
+        async function handleBulkImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async event => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    const added = await CpedleDB.bulkImport(parsed);
+                    alert(`Successfully imported ${added} question(s)!`);
+                    renderTable();
+                } catch (err) {
+                    alert('Import failed: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
