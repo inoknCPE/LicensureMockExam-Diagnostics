@@ -7,12 +7,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     await CpedleDB.ready;
     // Ensure active exam session or generate a default one from data layer
     let activeExam = CpedleDB.getActiveExam();
+    const isGuest = CpedleDB.getCurrentUser().role === 'GUEST';
+    if (isGuest && activeExam &&
+        (activeExam.mode !== 'practice' || (activeExam.questions || []).length > 10)) {
+        activeExam = null;
+    }
     if (!activeExam || !activeExam.questions || activeExam.questions.length === 0) {
         activeExam = CpedleDB.generateExam({
             count: 10, timeMinutes: 60, domain: 'All',
-            mode: CpedleDB.getCurrentUser().role === 'GUEST' ? 'practice' : 'mock'
+            mode: isGuest ? 'practice' : 'mock'
         });
     }
+    if (isGuest) document.title = 'Practice Drill | cpedle';
 
     const questions = activeExam.questions;
     let currentIndex = 0;

@@ -78,6 +78,7 @@
                 <a class="link" href="admin-generator.html">GENERATOR</a>
                 <a class="link" href="admin-requests.html">REQUESTS</a>
                 <a class="link" href="admin-accounts.html" style="color: var(--teal); font-weight: 700;">ACCOUNTS</a>
+                <a class="link" href="admin-question-approvals.html">QUESTION APPROVALS</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -165,18 +166,19 @@
             let pendingResets = [];
 
             try {
-                users = await apiCall('/admin/accounts');
+                users = await apiCall('/admin/users');
             } catch (e) {
-                const current = CpedleDB.getCurrentUser();
-                users = [
-                    { id: current.id || '1', username: current.username || 'adminuser', email: current.email || 'admin@example.com', name: current.name || 'ChosenAdmin', role: current.role || 'ADMIN', locked: false }
-                ];
+                document.getElementById('users-tbody').innerHTML =
+                    `<tr><td colspan="6">Unable to load accounts: ${escapeHtml(e.message)}</td></tr>`;
+                return;
             }
 
             try {
-                pendingResets = await apiCall('/admin/resets');
+                pendingResets = await apiCall('/admin/reset-requests');
             } catch (e) {
-                pendingResets = [];
+                document.getElementById('resets-tbody').innerHTML =
+                    `<tr><td colspan="3">Unable to load reset requests: ${escapeHtml(e.message)}</td></tr>`;
+                return;
             }
 
             // Render User Accounts
@@ -198,9 +200,9 @@
                                 <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
                             </select>
                         </td>
-                        <td><span class="deficiency-tag ${u.locked ? 'tag-deficient' : 'tag-proficient'}">${u.locked ? 'Locked' : 'Active'}</span></td>
+                        <td><span class="deficiency-tag ${u.is_locked ? 'tag-deficient' : 'tag-proficient'}">${u.is_locked ? 'Locked' : 'Active'}</span></td>
                         <td style="text-align: right;">
-                            ${u.locked ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
+                            ${u.is_locked ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
                         </td>
                     `;
                     uTbody.appendChild(tr);
@@ -217,7 +219,7 @@
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>${escapeHtml(r.username)}</strong> <span style="color:var(--gray-text);">(${escapeHtml(r.email)})</span></td>
-                        <td style="color: var(--gray-text); font-size: 0.85rem;">${escapeHtml(r.created_at || 'Recently')}</td>
+                        <td style="color: var(--gray-text); font-size: 0.85rem;">${escapeHtml(r.requested_at || 'Recently')}</td>
                         <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
                             <button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem; color: var(--coral); border-color: var(--coral);" onclick="decideReset('${r.id}', false)">Reject</button>
                             <button class="btn-solid-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="decideReset('${r.id}', true)">Approve</button>
@@ -251,7 +253,7 @@
 
         async function decideReset(resetId, approve) {
             try {
-                await apiCall(`/admin/resets/${resetId}`, {
+                await apiCall(`/admin/reset-requests/${resetId}/decision`, {
                     method: 'POST',
                     body: JSON.stringify({ approve })
                 });

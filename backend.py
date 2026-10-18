@@ -117,6 +117,18 @@ def initialize() -> None:
                 difficulty TEXT NOT NULL,
                 explanation TEXT NOT NULL DEFAULT ''
             );
+            CREATE TABLE IF NOT EXISTS question_change_requests (
+                id INTEGER PRIMARY KEY,
+                proposer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                action TEXT NOT NULL CHECK(action IN ('ADD','EDIT')),
+                target_question_id TEXT,
+                payload_json TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending','approved','rejected')),
+                submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TEXT,
+                reviewed_by INTEGER REFERENCES users(id)
+            );
             CREATE TABLE IF NOT EXISTS exam_history (
                 id INTEGER PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -301,7 +313,12 @@ class ResetIn(BaseModel):
 
 class ProfileIn(BaseModel):
     name: str = Field(min_length=2, max_length=100)
-    discipline: str
+    discipline: str = ""
+
+
+class EmailChangeIn(BaseModel):
+    email: str
+    current_password: str
 
 
 class RoleIn(BaseModel):
@@ -491,17 +508,34 @@ def request_reset(payload: ResetIn, request: Request) -> dict:
 
 @router.put("/profile")
 def save_profile(payload: ProfileIn, user: dict = Depends(require_user)) -> dict:
-    if payload.discipline not in DISCIPLINES:
+    if user["role"] != "ADMIN" and payload.discipline not in DISCIPLINES:
         raise HTTPException(422, "Select a listed Computer Engineering discipline.")
     name = payload.name.strip()
     if len(name) < 2:
         raise HTTPException(422, "Enter your name.")
+    discipline = "" if user["role"] == "ADMIN" else payload.discipline
     with db() as connection:
         connection.execute(
             "UPDATE users SET name=?, discipline=? WHERE id=?",
-            (name, payload.discipline, user["id"]),
+            (name, discipline, user["id"]),
         )
-    return {"user": {**user, "name": name, "discipline": payload.discipline}}
+    return {"user": {**user, "name": name, "discipline": discipline}}
+
+
+@router.put("/profile/email")
+def change_own_email(payload: EmailChangeIn, user: dict = Depends(require_user)) -> dict:
+    email = validate_email(payload.email)
+    try:
+        with db() as connection:
+            row = connection.execute(
+                "SELECT password_hash FROM users WHERE id=?", (user["id"],)
+            ).fetchone()
+            if row is None or not check_password(payload.current_password, row["password_hash"]):
+                raise HTTPException(403, "Current password is incorrect.")
+            connection.execute("UPDATE users SET email=? WHERE id=?", (email, user["id"]))
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "Email is already registered.") from None
+    return {"user": {**user, "email": email}}
 
 
 @router.get("/admin/users")
@@ -578,10 +612,92 @@ def validate_question(payload: QuestionIn) -> None:
         raise HTTPException(422, "Invalid question options, answer, domain, cognitive level, or difficulty.")
 
 
+def queue_question_change(connection: sqlite3.Connection, payload: QuestionIn,
+                          action: str, target_id: str | None, user_id: int) -> dict:
+    """Keep examiner changes separate from the live bank until admin review."""
+    if action == "ADD":
+        payload = payload.model_copy(update={"id": payload.id or "CPE-" + secrets.token_hex(5).upper()})
+        if connection.execute("SELECT 1 FROM questions WHERE id=?", (payload.id,)).fetchone():
+            raise HTTPException(409, "Question ID already exists.")
+    elif not connection.execute("SELECT 1 FROM questions WHERE id=?", (target_id,)).fetchone():
+        raise HTTPException(404, "Question not found.")
+    cursor = connection.execute(
+        "INSERT INTO question_change_requests(proposer_id,action,target_question_id,payload_json) "
+        "VALUES(?,?,?,?)",
+        (user_id, action, target_id, payload.model_dump_json()),
+    )
+    return {"id": payload.id or target_id, "pending": True, "request_id": cursor.lastrowid}
+
+
+@router.get("/questions/change-requests")
+def question_change_requests(user: dict = Depends(role_required("EXAMINER", "ADMIN"))) -> list[dict]:
+    import json
+    with db() as connection:
+        where = "WHERE c.status='pending'" if user["role"] == "ADMIN" else "WHERE c.proposer_id=?"
+        params = () if user["role"] == "ADMIN" else (user["id"],)
+        rows = connection.execute(
+            f"""SELECT c.id,c.action,c.target_question_id,c.payload_json,c.status,
+                       c.submitted_at,u.username AS proposer
+                FROM question_change_requests c JOIN users u ON u.id=c.proposer_id
+                {where} ORDER BY c.id DESC""", params,
+        ).fetchall()
+    changes = []
+    for row in rows:
+        change = dict(row)
+        change["question"] = json.loads(change.pop("payload_json"))
+        changes.append(change)
+    return changes
+
+
+@router.post("/admin/questions/change-requests/{change_id}/decision")
+def decide_question_change(change_id: int, payload: DecisionIn,
+                           admin: dict = Depends(role_required("ADMIN"))) -> dict:
+    import json
+    try:
+        with db() as connection:
+            row = connection.execute(
+                "SELECT * FROM question_change_requests WHERE id=? AND status='pending'",
+                (change_id,),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(404, "Pending question change not found.")
+            question = QuestionIn.model_validate_json(row["payload_json"])
+            validate_question(question)
+            if payload.approve:
+                if row["action"] == "ADD":
+                    connection.execute(
+                        "INSERT INTO questions(id,q,opts_json,ans,domain,cognitive,difficulty,explanation) "
+                        "VALUES(?,?,?,?,?,?,?,?)",
+                        (question.id, question.q.strip(), json.dumps(question.opts), question.ans,
+                         question.domain, question.cognitive, question.difficulty, question.explanation),
+                    )
+                else:
+                    cursor = connection.execute(
+                        "UPDATE questions SET q=?,opts_json=?,ans=?,domain=?,cognitive=?,difficulty=?,"
+                        "explanation=? WHERE id=?",
+                        (question.q.strip(), json.dumps(question.opts), question.ans,
+                         question.domain, question.cognitive, question.difficulty,
+                         question.explanation, row["target_question_id"]),
+                    )
+                    if not cursor.rowcount:
+                        raise HTTPException(409, "Original question no longer exists. Reject this change.")
+            connection.execute(
+                "UPDATE question_change_requests SET status=?,reviewed_at=CURRENT_TIMESTAMP,reviewed_by=? "
+                "WHERE id=?",
+                ("approved" if payload.approve else "rejected", admin["id"], change_id),
+            )
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "Question ID is already in the live bank. Reject this change.") from None
+    return {"ok": True}
+
+
 @router.post("/questions")
 def add_question(payload: QuestionIn, user: dict = Depends(role_required("EXAMINER", "ADMIN"))) -> dict:
     import json
     validate_question(payload)
+    if user["role"] == "EXAMINER":
+        with db() as connection:
+            return queue_question_change(connection, payload, "ADD", None, user["id"])
     question_id = payload.id or ("CPE-" + secrets.token_hex(5).upper())
     try:
         with db() as connection:
@@ -599,6 +715,9 @@ def add_question(payload: QuestionIn, user: dict = Depends(role_required("EXAMIN
 def edit_question(question_id: str, payload: QuestionIn, user: dict = Depends(role_required("EXAMINER", "ADMIN"))) -> dict:
     import json
     validate_question(payload)
+    if user["role"] == "EXAMINER":
+        with db() as connection:
+            return queue_question_change(connection, payload, "EDIT", question_id, user["id"])
     with db() as connection:
         cursor = connection.execute(
             "UPDATE questions SET q=?,opts_json=?,ans=?,domain=?,cognitive=?,difficulty=?,explanation=? WHERE id=?",
@@ -611,7 +730,7 @@ def edit_question(question_id: str, payload: QuestionIn, user: dict = Depends(ro
 
 
 @router.delete("/questions/{question_id}")
-def delete_question(question_id: str, user: dict = Depends(role_required("EXAMINER", "ADMIN"))) -> dict:
+def delete_question(question_id: str, user: dict = Depends(role_required("ADMIN"))) -> dict:
     with db() as connection:
         cursor = connection.execute("DELETE FROM questions WHERE id=?", (question_id,))
     if not cursor.rowcount:
@@ -628,13 +747,17 @@ def import_questions(items: list[QuestionIn], user: dict = Depends(role_required
         validate_question(item)
     with db() as connection:
         for item in items:
+            if user["role"] == "EXAMINER":
+                queue_question_change(connection, item, "ADD", None, user["id"])
+                continue
             connection.execute(
                 "INSERT INTO questions(id,q,opts_json,ans,domain,cognitive,difficulty,explanation) VALUES(?,?,?,?,?,?,?,?)",
                 (item.id or "CPE-" + secrets.token_hex(5).upper(), item.q.strip(),
                  json.dumps(item.opts), item.ans, item.domain, item.cognitive,
                  item.difficulty, item.explanation),
             )
-    return {"added": len(items)}
+    return {"added": len(items) if user["role"] == "ADMIN" else 0,
+            "pending": len(items) if user["role"] == "EXAMINER" else 0}
 
 
 @router.post("/requests")
@@ -706,6 +829,11 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
 @router.post("/exams/practice-score")
 def practice_score(payload: ExamSubmission, request: Request) -> dict:
     require_same_origin(request)
+    session = current_session(request)
+    if session is None and len(payload.answers) > 10:
+        raise HTTPException(422, "Guest practice drills are limited to 10 questions.")
+    if session and session[0]["role"] not in {"STUDENT"}:
+        raise HTTPException(403, "This role cannot take practice drills.")
     with db() as connection:
         return score_exam_payload(connection, payload)
 
@@ -734,3 +862,27 @@ def create_initial_admin(username: str, email: str, password: str) -> None:
             "INSERT INTO users(username,email,password_hash,role,name) VALUES(?,?,?,'ADMIN',?)",
             (username, email, hash_password(password), username),
         )
+
+
+def reset_admin_password_local(identifier: str, password: str) -> str:
+    """Recover an existing admin from the local machine, never from an HTTP route."""
+    validate_password(password)
+    identifier = identifier.strip()
+    with db() as connection:
+        admin = connection.execute(
+            "SELECT id,username FROM users WHERE role='ADMIN' AND (username=? OR email=?)",
+            (identifier, identifier),
+        ).fetchone()
+        if admin is None:
+            raise ValueError("Administrator account not found.")
+        connection.execute(
+            "UPDATE users SET password_hash=?,invalid_attempts=0,is_locked=0 WHERE id=?",
+            (hash_password(password), admin["id"]),
+        )
+        connection.execute("DELETE FROM sessions WHERE user_id=?", (admin["id"],))
+        connection.execute(
+            "UPDATE password_reset_requests SET status='rejected',reviewed_at=CURRENT_TIMESTAMP "
+            "WHERE user_id=? AND status='pending'",
+            (admin["id"],),
+        )
+    return admin["username"]

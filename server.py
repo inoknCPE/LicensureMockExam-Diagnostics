@@ -16,6 +16,7 @@ PAGE_ROLES = {
     "admin-generator.html": {"ADMIN"},
     "admin-requests.html": {"ADMIN"},
     "admin-accounts.html": {"ADMIN"},
+    "admin-question-approvals.html": {"ADMIN"},
     "test-bank.html": {"ADMIN", "EXAMINER"},
     "examiner-dashboard.html": {"ADMIN", "EXAMINER"},
     "examinee-dashboard.html": {"STUDENT"},
@@ -71,6 +72,8 @@ def html_page(page_name: str, request: Request) -> Response:
             return RedirectResponse("/login.html", status_code=303)
         if session[0]["role"] not in allowed:
             raise HTTPException(status_code=403, detail="Your account cannot open this page.")
+        if filename == "profile.html" and session[0]["role"] == "ADMIN":
+            return RedirectResponse("/admin-dashboard.html", status_code=303)
     return FileResponse(APP_DIR / filename)
 
 
@@ -81,4 +84,4 @@ app.mount("/js", StaticFiles(directory=APP_DIR / "js"), name="js")
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("server:app", host="127.0.0.1", port=5000, reload=True)

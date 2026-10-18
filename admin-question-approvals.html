@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Question Approvals | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="admin-nav-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-generator.html">GENERATOR</a>
+                <a class="link" href="admin-requests.html">REQUESTS</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <a class="link" href="admin-question-approvals.html" aria-current="page" style="color: var(--teal); font-weight: 700;">QUESTION APPROVALS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+    <section class="section-padding container">
+        <h1>Examiner Question Approvals</h1>
+        <p>Review each proposed addition or edit. A question enters or changes the live bank only after you approve it.</p>
+        <p id="review-message" role="status" aria-live="polite"></p>
+        <div id="question-approval-list"></div>
+    </section>
+    <script>
+        async function loadQuestionApprovals() {
+            const changes = await apiCall('/questions/change-requests');
+            const list = document.getElementById('question-approval-list');
+            list.replaceChildren();
+            if (!changes.length) {
+                const empty = document.createElement('p');
+                empty.textContent = 'No question changes are awaiting approval.';
+                list.appendChild(empty);
+                return;
+            }
+            changes.forEach(change => {
+                const card = document.createElement('article');
+                card.className = 'card';
+                card.style.marginBottom = '20px';
+                const heading = document.createElement('h2');
+                heading.textContent = `${change.action} • ${change.question.id || change.target_question_id}`;
+                card.appendChild(heading);
+                const byline = document.createElement('p');
+                byline.textContent = `Submitted by ${change.proposer} on ${change.submitted_at}`;
+                card.appendChild(byline);
+                if (change.action === 'EDIT') {
+                    const original = CpedleDB.getQuestions().find(q => q.id === change.target_question_id);
+                    const old = document.createElement('p');
+                    old.textContent = original ? `Current question: ${original.q}` :
+                        'The original question is no longer in the live bank.';
+                    card.appendChild(old);
+                }
+                const proposed = document.createElement('pre');
+                proposed.style.whiteSpace = 'pre-wrap';
+                proposed.textContent = JSON.stringify(change.question, null, 2);
+                card.appendChild(proposed);
+                for (const [label, approve] of [['Approve', true], ['Reject', false]]) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = approve ? 'btn-solid-pill' : 'btn-outline-pill';
+                    button.textContent = label;
+                    button.style.marginRight = '8px';
+                    button.addEventListener('click', async () => {
+                        if (!confirm(`${label} this proposed ${change.action.toLowerCase()}?`)) return;
+                        const message = document.getElementById('review-message');
+                        try {
+                            await apiCall('/admin/questions/change-requests/' + change.id + '/decision', {
+                                method: 'POST', body: JSON.stringify({ approve })
+                            });
+                            await refreshBootstrap();
+                            message.style.color = '#16803d';
+                            message.textContent = `Question change ${label.toLowerCase()}d.`;
+                            await loadQuestionApprovals();
+                        } catch (error) {
+                            message.style.color = 'var(--coral)';
+                            message.textContent = error.message;
+                        }
+                    });
+                    card.appendChild(button);
+                }
+                list.appendChild(card);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            try { await loadQuestionApprovals(); }
+            catch (error) { document.getElementById('review-message').textContent = error.message; }
+        });
+    </script>
+</body>
+</html>

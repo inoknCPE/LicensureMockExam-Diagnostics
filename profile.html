@@ -14,16 +14,27 @@
     </div></nav>
     <div class="auth-wrapper"><div class="card auth-card">
         <h1>Personalize Your Profile</h1>
-        <p class="text-center" style="color:var(--gray-text); margin-bottom:20px;">Your role is assigned by the system or administrator. Choose your Computer Engineering discipline.</p>
+        <p id="profile-description" class="text-center" style="color:var(--gray-text); margin-bottom:20px;">Your role is assigned by the system or administrator. Choose your Computer Engineering discipline.</p>
         <form id="profile-form">
             <div class="form-group"><label for="profile-name">Full name</label>
                 <input id="profile-name" type="text" minlength="2" maxlength="100" required autocomplete="name"></div>
             <div class="form-group"><label for="profile-role">Access role</label>
                 <input id="profile-role" type="text" readonly></div>
-            <div class="form-group"><label for="profile-discipline">Discipline</label>
+            <div id="discipline-group" class="form-group"><label for="profile-discipline">Discipline</label>
                 <select id="profile-discipline" required><option value="">Select your discipline</option></select></div>
             <p id="profile-error" role="alert" style="color:var(--coral)"></p>
             <button class="btn-solid-pill" type="submit">Save Profile</button>
+        </form>
+        <hr class="footer-divider" style="margin:24px 0">
+        <h2 style="font-size:1.2rem">Sign-in email</h2>
+        <p style="color:var(--gray-text)">Use the saved address below to log in. To correct it, confirm your current password. Email ownership is not yet verified.</p>
+        <form id="email-form">
+            <div class="form-group"><label for="profile-email">Email address</label>
+                <input id="profile-email" type="email" required autocomplete="email"></div>
+            <div class="form-group"><label for="profile-current-password">Current password</label>
+                <input id="profile-current-password" type="password" required autocomplete="current-password"></div>
+            <p id="email-error" role="alert" style="color:var(--coral)"></p>
+            <button class="btn-outline-pill" type="submit">Update Email</button>
         </form>
     </div></div>
     <script>
@@ -36,7 +47,14 @@
             }
             document.getElementById('profile-name').value = user.name || '';
             document.getElementById('profile-role').value = user.role;
+            document.getElementById('profile-email').value = user.email || '';
             const select = document.getElementById('profile-discipline');
+            if (user.role === 'ADMIN') {
+                document.getElementById('discipline-group').style.display = 'none';
+                document.getElementById('profile-description').textContent =
+                    'Administrators manage accounts and system access; no exam discipline is required.';
+                select.required = false;
+            }
             Object.keys(DISCIPLINES).forEach(discipline => {
                 const option = document.createElement('option');
                 option.value = option.textContent = discipline;
@@ -55,6 +73,22 @@
                     user.role === 'EXAMINER' ? 'examiner-dashboard.html' : 'examinee-dashboard.html';
             } catch (error) {
                 document.getElementById('profile-error').textContent = error.message;
+            }
+        });
+        document.getElementById('email-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const message = document.getElementById('email-error');
+            try {
+                const user = await CpedleDB.changeOwnEmail(
+                    document.getElementById('profile-email').value.trim(),
+                    document.getElementById('profile-current-password').value
+                );
+                document.getElementById('profile-current-password').value = '';
+                message.style.color = '#16803d';
+                message.textContent = `Email updated to ${user.email}. You can use it on your next login.`;
+            } catch (error) {
+                message.style.color = 'var(--coral)';
+                message.textContent = error.message;
             }
         });
     </script>

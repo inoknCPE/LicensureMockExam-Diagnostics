@@ -38,6 +38,7 @@
 
 /* RESET & TYPOGRAPHY */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 body {
     font-family: var(--font-body);
     background-color: var(--bg);
@@ -52,6 +53,41 @@ h1, h2, h3, h4, .serif-heading {
 }
 a { text-decoration: none; color: var(--text); }
 button, input, select, textarea { font-family: var(--font-body); }
+
+/* Shared logout confirmation for all signed-in roles. */
+.logout-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: min(320px, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+.logout-dialog::backdrop { background: rgba(255, 143, 149, 0.72); }
+.logout-dialog__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 22px;
+    text-align: center;
+}
+.logout-dialog__icon { width: 80px; height: 80px; margin-bottom: 6px; }
+.logout-dialog__card p { margin-bottom: 4px; line-height: 1.4; }
+.logout-dialog__card button {
+    width: 100%;
+    min-height: 38px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.logout-dialog__cancel { border: 1px solid #1A9FE9; background: #1A9FE9; color: #fff; }
+.logout-dialog__confirm { border: 1px solid #1A9FE9; background: var(--surface); color: #168CCD; }
+.logout-dialog__card button:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 0 5%; }
 .section-padding { padding: 40px 0; }
@@ -157,16 +193,16 @@ button, input, select, textarea { font-family: var(--font-body); }
     color: currentColor; border-bottom: 1px solid var(--border);
     background: transparent; border-top: none; border-left: none; border-right: none;
     font-size: 13px; font-weight: 600; text-transform: uppercase; cursor: pointer;
+    transition: color var(--speed), background-color var(--speed);
 }
+.nav__options :is(a, button):is(:hover, :focus-visible, :active),
+.nav__options a[aria-current="page"] {
+    color: var(--teal);
+    background-color: color-mix(in srgb, var(--teal) 9%, var(--surface));
+}
+.nav__options a[aria-current="page"] { font-weight: 700; }
 
 @media(min-width: 768px) {
-    :root {
-      --lerp-0: 1; 
-      --lerp-1: calc(sin(30deg));
-      --lerp-2: calc(sin(20deg));
-      --lerp-3: calc(sin(10deg));
-      --lerp-4: 0;
-    }
     .nav__control { display: none; }
     .nav__options {
         flex: 1;
@@ -178,25 +214,12 @@ button, input, select, textarea { font-family: var(--font-body); }
         z-index: 1;
     }
     .nav__options a, .nav__options button { border-bottom: 0; }
-    .link::before {
-        content: ""; position: absolute; height: 300%;
-        border-right: 1px solid var(--border);
-        bottom: 0; left: 0; right: 0;
-        background: var(--surface); z-index: -1;
+    #admin-nav-bar a, #admin-nav-bar button {
+        padding-inline: 0.7rem;
+        white-space: nowrap;
+        font-size: clamp(0.65rem, 1vw, 0.8125rem);
     }
-    .link {
-        translate: 0 calc(var(--lerp, 0) * 70%);
-        transition: translate var(--speed) cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    :is(.link:hover, .link:focus-visible) { --lerp: var(--lerp-0); z-index: 5; }
-    .link:has( + :is(.link:hover, .link:focus-visible)),
-    :is(.link:hover, .link:focus-visible) + .link { --lerp: var(--lerp-1); z-index: 4; }
-    .link:has( + .link + :is(.link:hover, .link:focus-visible)),
-    :is(.link:hover, .link:focus-visible) + .link + .link { --lerp: var(--lerp-2); z-index: 3; }
-    .link:has( + .link + .link + :is(.link:hover, .link:focus-visible)),
-    :is(.link:hover, .link:focus-visible) + .link + .link + .link { --lerp: var(--lerp-3); z-index: 2; }
-    .link:has( + .link + .link + .link + :is(.link:hover, .link:focus-visible)),
-    :is(.link:hover, .link:focus-visible) + .link + .link + .link + .link { --lerp: var(--lerp-4); z-index: 1; }
+    .nav__options :is(a, button) { border-left: 1px solid var(--border); }
 }
 
 /* THEME TOGGLE */

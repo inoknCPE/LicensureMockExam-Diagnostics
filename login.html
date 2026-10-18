@@ -34,7 +34,7 @@
                 <a class="link" href="subjects.html">SUBJECTS</a>
                 <a class="link" href="faq.html">FAQ</a>
                 <a class="link" href="signup.html">SIGN UP</a>
-                <a class="link" href="login.html">LOGIN</a>
+                <a class="link" href="login.html" aria-current="page">LOGIN</a>
             </div>
         </div>
     </nav>
@@ -126,7 +126,7 @@
 
             const res = await CpedleDB.login(email, pass);
             if (res.success) {
-                if (!res.user.name || !res.user.discipline) {
+                if (!res.user.name || (res.user.role !== 'ADMIN' && !res.user.discipline)) {
                     window.location.href = 'profile.html';
                 } else if (res.user.role === 'ADMIN') {
                     window.location.href = 'admin-dashboard.html';

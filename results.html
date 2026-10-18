@@ -66,7 +66,7 @@
             <p id="score-summary" style="font-size: 0.95rem; color: var(--gray-text); margin-bottom: 30px;"></p>
             
             <!-- Deficiency Tag Notice -->
-            <div style="background: rgba(27, 42, 74, 0.04); padding: 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 25px; text-align: left; border-left: 3px solid var(--teal);">
+            <div id="deficiency-guide" style="background: rgba(27, 42, 74, 0.04); padding: 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 25px; text-align: left; border-left: 3px solid var(--teal);">
                 <strong>Table of Specifications Deficiency Rating:</strong><br>
                 • <span style="color:var(--coral); font-weight:600;">Deficient</span>: Score &lt; 60% (Remediation Recommended)<br>
                 • <span style="color:#D97706; font-weight:600;">Satisfactory</span>: Score 60% – 74%<br>
@@ -151,7 +151,15 @@
 
             const latest = CpedleDB.getLatestResult();
             if (user.role === 'GUEST') {
+                navBar.innerHTML = '<a class="link" href="index.html#how-it-works">HOW IT WORKS</a>' +
+                    '<a class="link" href="subjects.html">SUBJECTS</a>' +
+                    '<a class="link" href="faq.html">FAQ</a>' +
+                    '<a class="link" href="signup.html">SIGN UP</a>' +
+                    '<a class="link" href="login.html">LOGIN</a>';
                 document.getElementById('history-link').style.display = 'none';
+                document.getElementById('overall-badge').style.display = 'none';
+                document.getElementById('deficiency-guide').style.display = 'none';
+                document.getElementById('report-bars-container').style.display = 'none';
                 const practice = document.getElementById('btn-remediation');
                 practice.textContent = 'Try Another Practice Drill';
                 practice.href = 'subjects.html';

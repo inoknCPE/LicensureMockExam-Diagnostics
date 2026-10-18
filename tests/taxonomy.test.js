@@ -59,11 +59,26 @@ test('cognitive levels, difficulties, and question metadata use the new taxonomy
 
 test('discipline exams only use their own questions and do not repeat to fill the count', () => {
     const exam = vm.runInContext(
-        "CpedleDB.generateExam({ domain: 'Network Engineer', count: 10 })", context);
+        "CpedleDB.generateExam({ domain: 'Network Engineer', count: 10, mode: 'practice' })", context);
     assert.ok(exam.questions.length > 0);
     assert.ok(exam.questions.every(q => q.domain === 'Networking Fundamentals'));
     assert.equal(new Set(exam.questions.map(q => q.id)).size, exam.questions.length);
     assert.match(exam.title, /Network Engineer/);
+});
+
+test('guest exams are practice-only and capped at ten questions', () => {
+    assert.throws(() => vm.runInContext("CpedleDB.generateExam({ mode: 'mock' })", context),
+        /Guests can only take practice drills/);
+    const exam = vm.runInContext("CpedleDB.generateExam({ count: 50, mode: 'practice' })", context);
+    assert.equal(exam.mode, 'practice');
+    assert.ok(exam.questions.length <= 10);
+    assert.match(exam.title, /Practice Drill/);
+    for (const file of ['index.html', 'subjects.html']) {
+        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        for (const match of html.matchAll(/<button[^>]*onclick="startMock\('[^']+'\)"[^>]*>/g)) {
+            assert.match(match[0], /data-student-only hidden/, `${file} hides mock exams from guests`);
+        }
+    }
 });
 
 test('no frontend page still mentions Civil Engineering', () => {
@@ -89,6 +104,70 @@ test('local HTML links point to existing pages', () => {
             assert.ok(fs.existsSync(path.join(root, target)), `${file} links to missing ${target}`);
         }
     }
+});
+
+test('every admin page shows the same navigation tabs', () => {
+    const pages = [
+        'admin-dashboard.html', 'test-bank.html', 'admin-generator.html',
+        'admin-requests.html', 'admin-accounts.html', 'admin-question-approvals.html'
+    ];
+    const expected = [
+        'admin-dashboard.html', 'test-bank.html', 'admin-generator.html',
+        'admin-requests.html', 'admin-accounts.html', 'admin-question-approvals.html'
+    ];
+    for (const file of pages) {
+        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const nav = html.match(/<div class="nav__options" id="admin-nav-bar">([\s\S]*?)<\/div>/);
+        assert.ok(nav, `${file} has an admin navigation bar`);
+        const links = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"/g), match => match[1]);
+        assert.deepEqual(links, expected, `${file} should show every admin tab in order`);
+    }
+});
+
+test('guest pages keep the same tabs and highlight their current page', () => {
+    const pages = ['index.html', 'subjects.html', 'faq.html', 'signup.html', 'login.html'];
+    const expected = [
+        'index.html#how-it-works', 'subjects.html', 'faq.html',
+        'signup.html', 'login.html'
+    ];
+    for (const file of pages) {
+        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const nav = html.match(/<div class="nav__options"[^>]*>([\s\S]*?)<\/div>/);
+        assert.ok(nav, `${file} has a navigation bar`);
+        const links = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"/g), match => match[1]);
+        assert.deepEqual(links, expected, `${file} should keep all guest tabs in order`);
+        const active = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"[^>]*aria-current="page"/g), match => match[1]);
+        assert.deepEqual(active, [expected[pages.indexOf(file)]], `${file} should highlight its own tab`);
+    }
+    const home = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.match(home, /id="how-it-works"/);
+});
+
+test('public navigation reflects the actual server session', () => {
+    const nav = { innerHTML: 'guest tabs' };
+    context.navUnderTest = nav;
+    vm.runInContext('renderSessionNavigation(navUnderTest)', context);
+    assert.equal(nav.innerHTML, 'guest tabs');
+    vm.runInContext("sessionUser = { role: 'STUDENT' }", context);
+    vm.runInContext('renderSessionNavigation(navUnderTest)', context);
+    assert.match(nav.innerHTML, /MOCK EXAMS/);
+    assert.match(nav.innerHTML, /LOGOUT/);
+    vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
+});
+
+test('student pages highlight their own tab and navbar hover stays aligned', () => {
+    const pages = [
+        ['examinee-dashboard.html', 'examinee-dashboard.html'],
+        ['generator.html', 'generator.html'],
+        ['exam-history.html', 'exam-history.html']
+    ];
+    for (const [file, target] of pages) {
+        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        assert.match(html, new RegExp(`href="${target}" aria-current="page"`), file);
+    }
+    const css = fs.readFileSync(path.join(root, 'css', 'styles.css'), 'utf8');
+    assert.match(css, /\.nav__options :is\(a, button\):is\(:hover, :focus-visible, :active\)/);
+    assert.doesNotMatch(css, /translate:\s*0 calc\(var\(--lerp/);
 });
 
 test('public JavaScript does not include seeded answer keys', () => {

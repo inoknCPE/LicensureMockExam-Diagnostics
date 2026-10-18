@@ -32,7 +32,7 @@
             <div class="nav__options" id="nav-options-bar">
                 <a class="link" href="index.html#how-it-works">HOW IT WORKS</a>
                 <a class="link" href="subjects.html">SUBJECTS</a>
-                <a class="link" href="faq.html">FAQ</a>
+                <a class="link" href="faq.html" aria-current="page">FAQ</a>
                 <a class="link" href="signup.html">SIGN UP</a>
                 <a class="link" href="login.html">LOGIN</a>
             </div>
@@ -172,33 +172,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             await CpedleDB.ready;
-            const user = CpedleDB.getCurrentUser();
-            const navBar = document.getElementById('nav-options-bar');
-            
-            if (user.role === 'ADMIN') {
-                navBar.innerHTML = `
-                    <a class="link" href="admin-dashboard.html">ADMIN DASHBOARD</a>
-                    <a class="link" href="test-bank.html">TEST BANK</a>
-                    <a class="link" href="admin-generator.html">GENERATOR</a>
-                    <a class="link" href="admin-requests.html">REQUESTS</a>
-                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-                `;
-            } else if (user.role === 'EXAMINER') {
-                navBar.innerHTML = `
-                    <a class="link" href="examiner-dashboard.html">EXAMINER DASHBOARD</a>
-                    <a class="link" href="test-bank.html">QUESTION BANK</a>
-                    <a class="link" href="profile.html">PROFILE</a>
-                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-                `;
-            } else if (user.role === 'STUDENT') {
-                navBar.innerHTML = `
-                    <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
-                    <a class="link" href="subjects.html">MOCK EXAMS</a>
-                    <a class="link" href="generator.html">GENERATOR</a>
-                    <a class="link" href="exam-history.html">HISTORY</a>
-                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-                `;
-            }
+            renderSessionNavigation(document.getElementById('nav-options-bar'));
         });
 
         function toggleFaqAccordion(btn) {

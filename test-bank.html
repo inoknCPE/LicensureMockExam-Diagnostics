@@ -119,6 +119,7 @@
                 <a class="link" href="admin-generator.html">GENERATOR</a>
                 <a class="link" href="admin-requests.html">REQUESTS</a>
                 <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <a class="link" href="admin-question-approvals.html" id="approval-nav-link">QUESTION APPROVALS</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -143,6 +144,8 @@
                 <div>
                     <h1 class="serif-heading">Computer Engineering Test Bank</h1>
                     <p>Curate, filter, and balance questions by Bloom's cognitive level and difficulty rating.</p>
+                    <p id="examiner-pending-note" hidden>Question additions and edits require administrator approval. <a href="#pending-submissions">View your submissions</a>.</p>
+                    <p id="admin-approvals-note" hidden><a href="admin-question-approvals.html">Review pending examiner question changes →</a></p>
                 </div>
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                     <label class="btn-outline-pill" style="cursor: pointer; padding: 10px 20px;">
@@ -196,6 +199,13 @@
                     </table>
                 </div>
             </div>
+            <section id="pending-submissions" hidden>
+                <h2 class="serif-heading admin-section-title">My Question Submissions</h2>
+                <div class="table-card-wrapper"><div class="table-responsive"><table class="cpedle-table">
+                    <thead><tr><th>Question</th><th>Action</th><th>Status</th><th>Submitted</th></tr></thead>
+                    <tbody id="pending-submissions-body"></tbody>
+                </table></div></div>
+            </section>
         </div>
     </main>
 
@@ -265,8 +275,33 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             await enforceRoleGuard(['ADMIN', 'EXAMINER']);
+            const role = CpedleDB.getCurrentUser().role;
+            document.getElementById('admin-approvals-note').hidden = role !== 'ADMIN';
+            document.getElementById('examiner-pending-note').hidden = role !== 'EXAMINER';
+            document.getElementById('pending-submissions').hidden = role !== 'EXAMINER';
+            document.getElementById('approval-nav-link').hidden = role !== 'ADMIN';
+            if (role === 'EXAMINER') {
+                document.getElementById('admin-nav-bar').innerHTML =
+                    '<a class="link" href="examiner-dashboard.html">DASHBOARD</a>' +
+                    '<a class="link" href="test-bank.html">TEST BANK</a>' +
+                    '<button class="link" onclick="CpedleDB.logout()">LOGOUT</button>';
+                await loadSubmissions();
+            }
             renderTable();
         });
+
+        async function loadSubmissions() {
+            const tbody = document.getElementById('pending-submissions-body');
+            try {
+                const changes = await apiCall('/questions/change-requests');
+                tbody.innerHTML = changes.length ? changes.map(change => `
+                    <tr><td>${escapeHtml(change.question.q)}</td><td>${escapeHtml(change.action)}</td>
+                    <td>${escapeHtml(change.status)}</td><td>${escapeHtml(change.submitted_at)}</td></tr>
+                `).join('') : '<tr><td colspan="4">No submissions yet.</td></tr>';
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4">${escapeHtml(error.message)}</td></tr>`;
+            }
+        }
 
         function renderTable() {
             const tbody = document.getElementById('bank-tbody');
@@ -303,7 +338,7 @@
                     <td>
                         <div class="action-btn-group">
                             <button class="btn-action-edit" onclick="editItem('${q.id}')">Edit</button>
-                            <button class="btn-action-del" onclick="deleteItem('${q.id}')">Del</button>
+                            ${CpedleDB.getCurrentUser().role === 'ADMIN' ? `<button class="btn-action-del" onclick="deleteItem('${escapeHtml(q.id)}')">Del</button>` : ''}
                         </div>
                     </td>
                 `;
@@ -366,9 +401,13 @@
                 explanation: document.getElementById('item-exp').value
             };
             try {
-                await CpedleDB.saveQuestion(data);
+                const result = await CpedleDB.saveQuestion(data);
                 closeModal();
                 renderTable();
+                if (result.pending) {
+                    await loadSubmissions();
+                    alert('Question submitted for administrator approval.');
+                }
             } catch (err) {
                 alert('Failed to save question: ' + err.message);
             }
@@ -392,9 +431,10 @@
             reader.onload = async event => {
                 try {
                     const parsed = JSON.parse(event.target.result);
-                    const added = await CpedleDB.bulkImport(parsed);
-                    alert(`Successfully imported ${added} question(s)!`);
+                    const result = await CpedleDB.bulkImport(parsed);
+                    alert(result.pending ? `${result.pending} question(s) submitted for administrator approval.` : `Successfully imported ${result.added} question(s)!`);
                     renderTable();
+                    if (result.pending) await loadSubmissions();
                 } catch (err) {
                     alert('Import failed: ' + err.message);
                 }

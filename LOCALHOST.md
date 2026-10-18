@@ -23,6 +23,21 @@ password containing a letter, uppercase letter, number, and special character.
 This local-only command works once. Public registration always creates a
 Student account; the administrator can assign Examiner or Admin roles from
 `admin-accounts.html`.
+Administrators go directly to the admin dashboard and cannot be sent to the
+discipline profile page. Student and Examiner profiles require a discipline.
+The Student/Examiner Profile page displays the saved sign-in email and lets
+its owner correct it after entering the current password. Email ownership
+is still not verified.
+
+Examiner additions, edits, and bulk imports go to an administrator approval
+queue. They do not affect the active question bank until approved at
+`admin-question-approvals.html`. Examiners cannot delete active questions.
+
+If you forget the only administrator's password, run
+`reset-admin-password.bat` locally. It prompts for that administrator's
+username or email and a new password, clears any lockout, and signs out
+existing sessions. It does not delete accounts, questions, or results.
+This developer-machine recovery command must not be exposed to web users.
 
 ## Start the application
 
@@ -32,9 +47,9 @@ Student account; the administrator can assign Examiner or Admin roles from
 
 Then open:
 
-- Application: http://127.0.0.1:8000
-- Backend health check: http://127.0.0.1:8000/api/health
-- Interactive API documentation: http://127.0.0.1:8000/api/docs
+- Application: http://127.0.0.1:5000
+- Backend health check: http://127.0.0.1:5000/api/health
+- Interactive API documentation: http://127.0.0.1:5000/api/docs
 
 Stop the server by pressing `Ctrl+C` in its terminal window.
 
@@ -60,6 +75,9 @@ score, and are not written to SQLite.
 This is a localhost prototype. Before deployment, add verified email-based
 recovery, production session/CSRF review, audit logging, database migrations,
 and server-controlled exam delivery.
+Editable system settings and assigned remediation scheduling are later
+milestones; the current administrator pages cover accounts, roles, lockouts,
+password requests, and examiner question approvals.
 
 ## Checks
 

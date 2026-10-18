@@ -103,8 +103,19 @@
                 </svg>
                 <span>cpedle</span>
             </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
             <div class="nav__options" id="user-nav-options">
-                <a class="link" href="#disciplines">SUBJECTS</a>
+                <a class="link" href="index.html#how-it-works" aria-current="page">HOW IT WORKS</a>
+                <a class="link" href="subjects.html">SUBJECTS</a>
+                <a class="link" href="faq.html">FAQ</a>
                 <a class="link" href="signup.html">SIGN UP</a>
                 <a class="link" href="login.html">LOGIN</a>
             </div>
@@ -125,10 +136,10 @@
     <!-- HERO SECTION -->
     <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
         <div class="container">
-            <div class="hero-header">
+            <div class="hero-header" id="how-it-works">
                 <span style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.85rem; font-weight: 700; color: var(--teal);">ACADEMIC MOCK EXAM ENGINE</span>
                 <h1 class="serif-heading">Computer Engineering Diagnostic Portal</h1>
-                <p>Explore the six Computer Engineering disciplines and their domains. Practice drills are open to guests; full mock exams are for registered examinees.</p>
+                <p>Explore the six Computer Engineering disciplines and their domains. Guests can try up to 10 available practice questions; only the score is shown, without saving a result. Mock exams are for registered students.</p>
             </div>
 
             <!-- DISCIPLINES GRID -->
@@ -149,7 +160,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Network Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Network Engineer')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Network Engineer')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -168,7 +179,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Systems Operations Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Systems Operations Engineer')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Systems Operations Engineer')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -187,7 +198,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Computer Systems Architect')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Computer Systems Architect')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Computer Systems Architect')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -206,7 +217,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Software Developer')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Software Developer')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Software Developer')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -225,7 +236,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Algorithm Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Algorithm Engineer')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Algorithm Engineer')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -244,7 +255,7 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-outline-pill" onclick="startDrill('Digital Design Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" onclick="startMock('Digital Design Engineer')">Mock Exam</button>
+                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Digital Design Engineer')">Mock Exam</button>
                     </div>
                 </div>
 
@@ -258,13 +269,13 @@
                     <p style="color: var(--gray-text); font-size: 0.92rem; margin: 0;">Practice across all available domains in a single timed exam. Designed for comprehensive licensure test preparation.</p>
                 </div>
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button class="btn-outline-pill" onclick="startDrill('All')">Sample Diagnostic</button>
-                    <button class="btn-solid-pill coral-btn" onclick="startMock('All')">Full Mock Exam</button>
+                    <button class="btn-outline-pill" onclick="startDrill('All')">Practice Drill</button>
+                    <button class="btn-solid-pill coral-btn" data-student-only hidden onclick="startMock('All')">Full Mock Exam</button>
                 </div>
             </div>
 
             <!-- BOTTOM PROMO CALLOUT -->
-            <div class="discipline-card" style="padding: 32px; text-align: center; border: 1px dashed var(--border); background: var(--surface); align-items: center;">
+            <div class="discipline-card" data-student-only hidden style="padding: 32px; text-align: center; border: 1px dashed var(--border); background: var(--surface); align-items: center;">
                 <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 8px;">Looking for Custom Topic Combinations?</h2>
                 <p style="color: var(--gray-text); font-size: 0.95rem; margin-bottom: 20px; max-width: 600px;">Build a custom mock set with adjustable difficulty ratios and time limits using the Exam Generator.</p>
                 <button class="btn-solid-pill lg" onclick="handleCustomGeneratorAccess()">Open Custom Exam Generator →</button>
@@ -282,12 +293,25 @@
     </footer>
 
     <script>
-        function startDrill(domain) {
-            CpedleDB.generateExam({ domain, count: 5, mode: 'drill', timeMinutes: 15 });
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            renderSessionNavigation(document.getElementById('user-nav-options'));
+            const isStudent = CpedleDB.getCurrentUser().role === 'STUDENT';
+            document.querySelectorAll('[data-student-only]').forEach(item => { item.hidden = !isStudent; });
+        });
+
+        async function startDrill(domain) {
+            await CpedleDB.ready;
+            CpedleDB.generateExam({ domain, count: 10, mode: 'practice', timeMinutes: 15 });
             window.location.href = 'exam.html';
         }
 
-        function startMock(domain) {
+        async function startMock(domain) {
+            await CpedleDB.ready;
+            if (CpedleDB.getCurrentUser().role !== 'STUDENT') {
+                window.location.href = 'login.html';
+                return;
+            }
             CpedleDB.generateExam({ domain, count: 10, mode: 'mock', timeMinutes: 30 });
             window.location.href = 'exam.html';
         }
