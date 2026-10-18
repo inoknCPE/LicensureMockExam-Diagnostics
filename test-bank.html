@@ -326,19 +326,25 @@
 
             items.forEach(q => {
                 const tr = document.createElement('tr');
+                const key = q.questionType === 'identification'
+                    ? `Accepted answer: ${escapeHtml(q.answerText || '')}`
+                    : `Key: ${'ABCDE'[q.ans] || '?'} (${escapeHtml((q.opts || [])[q.ans] || '')})`;
+                const actions = q.source === 'imported'
+                    ? '<span title="This question is maintained in the imported team database">Imported · read-only</span>'
+                    : `<button class="btn-action-edit" onclick="editItem('${q.id}')">Edit</button>
+                       ${CpedleDB.getCurrentUser().role === 'ADMIN' ? `<button class="btn-action-del" onclick="deleteItem('${escapeHtml(q.id)}')">Del</button>` : ''}`;
                 tr.innerHTML = `
                     <td style="font-weight: 700; color: var(--navy);">${escapeHtml(q.id)}</td>
                     <td>
                         <div style="font-weight: 600; color: var(--text); margin-bottom: 4px; line-height: 1.4;">${escapeHtml(q.q)}</div>
-                        <div style="font-size: 0.8rem; color: var(--teal); font-weight: 600;">Key: ${['A','B','C','D'][q.ans]} (${escapeHtml(q.opts[q.ans])})</div>
+                        <div style="font-size: 0.8rem; color: var(--teal); font-weight: 600;">${key}</div>
                     </td>
                     <td style="font-size: 0.85rem; color: var(--gray-text);">${escapeHtml(q.domain)}</td>
                     <td><span class="badge-cog-${q.cognitive.toLowerCase()}">${escapeHtml(q.cognitive)}</span></td>
                     <td><span class="badge-diff-${q.difficulty.toLowerCase()}">${escapeHtml(q.difficulty)}</span></td>
                     <td>
                         <div class="action-btn-group">
-                            <button class="btn-action-edit" onclick="editItem('${q.id}')">Edit</button>
-                            ${CpedleDB.getCurrentUser().role === 'ADMIN' ? `<button class="btn-action-del" onclick="deleteItem('${escapeHtml(q.id)}')">Del</button>` : ''}
+                            ${actions}
                         </div>
                     </td>
                 `;

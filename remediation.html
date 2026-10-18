@@ -149,7 +149,7 @@
         });
 
         function launchRemediationTopic(domainName) {
-            const exam = CpedleDB.generateExam({ count: 5, timeMinutes: 25, domain: domainName, easyPct: 40, medPct: 40, hardPct: 20 });
+            const exam = CpedleDB.generateExam({ count: 5, timeMinutes: 25, domain: domainName, easyPct: 40, medPct: 40, hardPct: 20, mode: 'remediation' });
             if (!exam.questions.length) {
                 alert('No questions are available for this remediation domain yet.');
                 return;

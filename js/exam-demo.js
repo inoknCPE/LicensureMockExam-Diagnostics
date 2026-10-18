@@ -5,7 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     await CpedleDB.ready;
-    // Ensure active exam session or generate a default one from data layer
+    // An exam must be explicitly created from a drill or generator page.
     let activeExam = CpedleDB.getActiveExam();
     const isGuest = CpedleDB.getCurrentUser().role === 'GUEST';
     if (isGuest && activeExam &&
@@ -13,10 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeExam = null;
     }
     if (!activeExam || !activeExam.questions || activeExam.questions.length === 0) {
-        activeExam = CpedleDB.generateExam({
-            count: 10, timeMinutes: 60, domain: 'All',
-            mode: isGuest ? 'practice' : 'mock'
-        });
+        window.location.href = isGuest ? 'subjects.html' : 'generator.html';
+        return;
     }
     if (isGuest) document.title = 'Practice Drill | cpedle';
 
@@ -88,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (q.flagged) {
                 dot.style.borderColor = 'var(--coral)';
                 dot.style.color = 'var(--coral)';
-            } else if (q.userAns !== null && q.userAns !== undefined) {
+            } else if (q.userAns !== null && q.userAns !== undefined && q.userAns !== '') {
                 dot.style.backgroundColor = 'rgba(46, 196, 182, 0.15)';
                 dot.style.borderColor = 'var(--teal)';
                 dot.style.color = 'var(--teal)';
@@ -113,12 +111,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         elProgress.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
         elQuestion.innerText = currentQ.q;
         elOptions.innerHTML = '';
+
+        const oldImage = document.getElementById('question-image');
+        if (oldImage) oldImage.remove();
+        if (currentQ.imageUrl && currentQ.imageUrl.startsWith('/static/images/')) {
+            const img = document.createElement('img');
+            img.id = 'question-image';
+            img.src = currentQ.imageUrl;
+            img.alt = 'Diagram for this question';
+            img.style.cssText = 'display:block;max-width:100%;max-height:360px;object-fit:contain;margin:16px 0;';
+            elQuestion.insertAdjacentElement('afterend', img);
+        }
         
-        currentQ.opts.forEach((opt, idx) => {
+        if (currentQ.questionType === 'identification') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.maxLength = 500;
+            input.className = 'answer-input';
+            input.style.cssText = 'box-sizing:border-box;width:100%;padding:12px 0;border:0;border-radius:0;outline:none;box-shadow:none;appearance:none;background:transparent;color:var(--text);font:inherit;';
+            input.placeholder = 'Type your answer';
+            input.setAttribute('aria-label', 'Identification answer');
+            input.value = typeof currentQ.userAns === 'string' ? currentQ.userAns : '';
+            input.addEventListener('input', () => {
+                currentQ.userAns = input.value;
+                CpedleDB.saveActiveExamState(activeExam);
+                updatePalette();
+            });
+            elOptions.appendChild(input);
+        } else currentQ.opts.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = `option-btn ${currentQ.userAns === idx ? 'selected' : ''}`;
-            btn.innerText = opt;
+            btn.style.width = '100%';
+            btn.textContent = `${String.fromCharCode(65 + idx)}. ${String(opt).replace(/^[A-E][.)]\s*/, '')}`;
+            const imageUrl = currentQ.optionImages && currentQ.optionImages[idx];
+            if (imageUrl && imageUrl.startsWith('/static/images/')) {
+                const image = document.createElement('img');
+                image.src = imageUrl;
+                image.alt = `Option ${String.fromCharCode(65 + idx)} diagram`;
+                image.style.cssText = 'display:block;max-width:100%;max-height:180px;object-fit:contain;margin:8px 0;';
+                btn.appendChild(image);
+            }
             btn.onclick = () => {
                 currentQ.userAns = idx;
                 CpedleDB.saveActiveExamState(activeExam);
@@ -126,6 +159,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             elOptions.appendChild(btn);
         });
+        if (currentQ.questionType === 'both') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.maxLength = 500;
+            input.className = 'answer-input';
+            input.style.cssText = 'box-sizing:border-box;width:100%;padding:12px 0;border:0;border-radius:0;outline:none;box-shadow:none;appearance:none;background:transparent;color:var(--text);font:inherit;';
+            input.placeholder = 'Or type your answer';
+            input.setAttribute('aria-label', 'Alternative written answer');
+            input.style.marginTop = '12px';
+            input.value = typeof currentQ.userAns === 'string' ? currentQ.userAns : '';
+            input.addEventListener('input', () => {
+                currentQ.userAns = input.value;
+                CpedleDB.saveActiveExamState(activeExam);
+                elOptions.querySelectorAll('.option-btn').forEach(button => button.classList.remove('selected'));
+                updatePalette();
+            });
+            elOptions.appendChild(input);
+        }
         
         elPrev.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
         elNext.innerText = currentIndex === questions.length - 1 ? 'Submit Exam' : 'Next Question';
@@ -139,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let submitting = false;
     async function submitExam(force = false) {
         if (submitting) return;
-        const unanswered = questions.filter(q => q.userAns === null || q.userAns === undefined).length;
+        const unanswered = questions.filter(q => q.userAns === null || q.userAns === undefined || q.userAns === '').length;
         if (!force && unanswered > 0) {
             const proceed = confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to finish and submit?`);
             if (!proceed) return;

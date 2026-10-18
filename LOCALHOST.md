@@ -1,8 +1,10 @@
 # Localhost Development Setup
 
 The Computer Engineering frontend is served by FastAPI on localhost. Accounts,
-roles, questions, requests, and student mock results now use a local SQLite
-database. Guest practice is anonymous and never creates a user or saved score.
+roles, local question edits, requests, and student mock results use a local
+SQLite database. The team's 1,200-question bank is read separately from
+`data/questionbank.db`. Guest practice is anonymous and never creates a user
+or saved score.
 
 ## First-time setup
 
@@ -33,6 +35,22 @@ Examiner additions, edits, and bulk imports go to an administrator approval
 queue. They do not affect the active question bank until approved at
 `admin-question-approvals.html`. Examiners cannot delete active questions.
 
+The administrator generator assembles a temporary, reviewable set on its own
+page. It does not open the answer-taking exam, save results, or publish a set
+to students. Admin and Examiner accounts cannot access exam-taking pages.
+Set publishing is not implemented.
+
+The student generator uses the draft TOS weights in `js/data.js`: five domain
+weights and four cognitive-level weights for each discipline, plus the chosen
+Easy/Medium/Hard profile. Students choose 1–200 questions; 1–10 is an unsaved
+practice drill, while larger sets are scored as mock exams. Whole-question
+quotas use largest-remainder rounding. The generator checks all three margins
+against the question bank and refuses an impossible mix instead of silently
+substituting questions. Some combinations, especially Easy-heavy profiles,
+are unavailable because the imported bank's difficulty and cognitive tags
+are correlated. The on-page TOS preview shows targets, not a feasibility
+guarantee; feasibility is checked when the student generates the set.
+
 If you forget the only administrator's password, run
 `reset-admin-password.bat` locally. It prompts for that administrator's
 username or email and a new password, clears any lockout, and signs out
@@ -62,10 +80,16 @@ request does **not** verify email ownership; the administrator must confirm
 identity outside the app before approval. Email syntax is checked, but no
 verification email is sent.
 
-The database is created in `data/cpedle.sqlite3` and is ignored by Git.
-The six built-in questions are illustrative placeholders; the group question
-bank can be imported later. The app does not import accounts or data from the
-older Tkinter app or browser `localStorage`.
+The accounts/results database is created in `data/cpedle.sqlite3` and is
+ignored by Git. The team's committed `data/questionbank.db` is opened
+read-only; its diagrams are served from `static/images/`. It contains 1,200
+questions across six disciplines and supports five-choice, identification,
+and combined-choice-or-written answers. Imported questions are labeled
+read-only in the administrator/examiner bank view. Locally created questions
+remain editable through the existing administrator approval workflow. The six
+built-in demo questions remain available alongside the imported bank.
+The app does not import accounts or data from the older Tkinter app or browser
+`localStorage`.
 
 The frontend's six disciplines and 30 domains are defined in `js/data.js`;
 the backend validates the same taxonomy in `backend.py`. Guest practice
@@ -74,7 +98,8 @@ score, and are not written to SQLite.
 
 This is a localhost prototype. Before deployment, add verified email-based
 recovery, production session/CSRF review, audit logging, database migrations,
-and server-controlled exam delivery.
+and server-controlled exam delivery. The current client-side question
+selection is suitable for the prototype, not for a high-stakes exam.
 Editable system settings and assigned remediation scheduling are later
 milestones; the current administrator pages cover accounts, roles, lockouts,
 password requests, and examiner question approvals.
@@ -83,5 +108,5 @@ password requests, and examiner question approvals.
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_access.py"
-node --test tests/taxonomy.test.js tests/auth-ui.test.js
+node --test tests/*.test.js
 ```

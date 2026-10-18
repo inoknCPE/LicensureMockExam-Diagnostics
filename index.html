@@ -312,8 +312,7 @@
                 window.location.href = 'login.html';
                 return;
             }
-            CpedleDB.generateExam({ domain, count: 10, mode: 'mock', timeMinutes: 30 });
-            window.location.href = 'exam.html';
+            window.location.href = 'generator.html?domain=' + encodeURIComponent(domain);
         }
     </script>
 </body>

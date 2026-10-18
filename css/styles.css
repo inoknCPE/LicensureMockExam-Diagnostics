@@ -284,6 +284,24 @@ button, input, select, textarea { font-family: var(--font-body); }
 .ui-option, .option-btn { padding: 10px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--gray-text); background: transparent; cursor: pointer; text-align: left;}
 .ui-option.active, .option-btn.selected { border-color: var(--teal); background: rgba(46, 196, 182, 0.05); color: var(--text); font-weight: 600; }
 
+/* Exam answers occupy one row each, including longer five-choice items. */
+.options-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.options-list .option-btn { display: block; width: 100%; font-size: 0.95rem; line-height: 1.5; }
+.options-list .answer-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px 0;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    appearance: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+}
+.options-list .answer-input:focus-visible { background: rgba(46, 196, 182, 0.08); }
+
 .dec-dot { position: absolute; border-radius: 50%; z-index: 0; }
 .dec-ring { position: absolute; border-radius: 50%; border: 3px solid; z-index: 0; }
 .coral-dot { background-color: var(--coral); }

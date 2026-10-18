@@ -6,7 +6,7 @@
     <title>Exam Generator | cpedle Admin</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
-    <script src="js/data.js"></script>
+    <script src="js/data.js?v=admin-preview-1"></script>
     <script src="js/theme-toggle.js"></script>
     <style>
         .admin-page-header {
@@ -95,6 +95,12 @@
             border: 1px solid rgba(255, 107, 107, 0.3);
             text-align: center;
         }
+        .set-preview { margin-top: 32px; }
+        .set-preview-item { padding: 18px 0; border-top: 1px solid var(--border); }
+        .set-preview-item:first-child { border-top: 0; }
+        .set-preview-item img { display: block; max-width: 100%; max-height: 220px; object-fit: contain; margin: 10px 0; }
+        .set-preview-item ol { margin: 10px 0; padding-left: 28px; }
+        .set-preview-item li { margin: 6px 0; }
     </style>
 </head>
 <body>
@@ -146,7 +152,7 @@
             <!-- HEADER BLOCK -->
             <div class="admin-page-header">
                 <h1 class="serif-heading">Mock Exam Generation Engine</h1>
-                <p>Assemble custom mock exams with precise difficulty ratios and real-time bank inventory validation.</p>
+                <p>Assemble and review a temporary mock set using difficulty ratios and live bank inventory. Domain and cognitive TOS quotas are not configured yet.</p>
             </div>
 
             <div class="split-layout" style="gap: 32px; align-items: flex-start;">
@@ -172,8 +178,8 @@
                         <div class="form-group" style="margin-bottom: 20px;">
                             <label>Target Difficulty Profile</label>
                             <div class="preset-group">
-                                <button type="button" class="preset-btn active" data-easy="50" data-med="30" data-hard="20" onclick="applyPreset(this)">Easy Focus</button>
-                                <button type="button" class="preset-btn" data-easy="30" data-med="50" data-hard="20" onclick="applyPreset(this)">Standard (30/50/20)</button>
+                                <button type="button" class="preset-btn" data-easy="50" data-med="30" data-hard="20" onclick="applyPreset(this)">Easy Focus</button>
+                                <button type="button" class="preset-btn active" data-easy="30" data-med="50" data-hard="20" onclick="applyPreset(this)">Standard (30/50/20)</button>
                                 <button type="button" class="preset-btn" data-easy="10" data-med="40" data-hard="50" onclick="applyPreset(this)">Hard Challenge</button>
                             </div>
                         </div>
@@ -200,11 +206,9 @@
                             </div>
                         </div>
 
-                        <div id="warning-msg" class="warning-banner">
-                            Note: Target count exceeds available items. Generation will use available pool.
-                        </div>
+                        <div id="warning-msg" class="warning-banner" role="alert"></div>
 
-                        <button type="submit" class="btn-solid-pill coral-btn lg" style="width: 100%;">Generate Mock Exam Set →</button>
+                        <button type="submit" id="generate-set-button" class="btn-solid-pill coral-btn lg" style="width: 100%;">Generate &amp; Preview Mock Exam Set →</button>
                     </form>
                 </div>
 
@@ -230,6 +234,12 @@
                     </div>
                 </div>
             </div>
+            <section id="generated-set" class="gen-card set-preview" hidden aria-live="polite">
+                <h2 class="serif-heading" style="font-size: 1.6rem; margin-bottom: 10px;">Generated Set Preview</h2>
+                <p id="generated-set-summary"></p>
+                <p style="color: var(--gray-text); margin: 10px 0 20px;">Preview only: this does not start an exam, record a score, or publish the set to students.</p>
+                <div id="generated-set-items"></div>
+            </section>
         </div>
     </main>
 
@@ -256,6 +266,10 @@
             easyPct = parseInt(btn.dataset.easy, 10);
             medPct = parseInt(btn.dataset.med, 10);
             hardPct = parseInt(btn.dataset.hard, 10);
+            for (const [name, value] of [['easy', easyPct], ['med', medPct], ['hard', hardPct]]) {
+                document.getElementById('rng-' + name).value = value;
+                document.getElementById('lbl-' + name).textContent = value + '%';
+            }
             updateInventory();
         }
 
@@ -302,20 +316,62 @@
             document.getElementById('req-med').textContent = reqM;
             document.getElementById('req-hard').textContent = reqH;
 
-            document.getElementById('warning-msg').style.display = count > pool.length ? 'block' : 'none';
+            const warning = document.getElementById('warning-msg');
+            const ratiosValid = easyPct + medPct + hardPct === 100 && reqH >= 0;
+            const enough = count <= pool.length && reqE <= easyAvail &&
+                reqM <= medAvail && reqH <= hardAvail;
+            warning.textContent = !ratiosValid
+                ? 'Difficulty percentages must total 100%.'
+                : !enough ? 'Not enough questions for this exact count and difficulty profile.' : '';
+            warning.style.display = warning.textContent ? 'block' : 'none';
+            document.getElementById('generate-set-button').disabled = !ratiosValid || !enough;
+            return ratiosValid && enough;
         }
 
         function generateCustomExam(e) {
             e.preventDefault();
+            if (!updateInventory()) return;
             const domain = document.getElementById('gen-domain').value;
             const count = parseInt(document.getElementById('gen-count').value, 10) || 10;
             const time = parseInt(document.getElementById('gen-time').value, 10) || 60;
+            try {
+                const set = CpedleDB.generateExam({
+                    count, timeMinutes: time, domain,
+                    easyPct, medPct, hardPct, mode: 'mock', preview: true
+                });
+                renderGeneratedSet(set);
+            } catch (error) {
+                const warning = document.getElementById('warning-msg');
+                warning.textContent = error.message;
+                warning.style.display = 'block';
+            }
+        }
 
-            CpedleDB.generateExam({
-                count, timeMinutes: time, domain,
-                easyPct, medPct, hardPct, mode: 'mock'
-            });
-            window.location.href = 'exam.html';
+        function renderGeneratedSet(set) {
+            const bankById = new Map(CpedleDB.getQuestions().map(question => [question.id, question]));
+            document.getElementById('generated-set-summary').textContent =
+                `${set.title} · ${set.questions.length} questions · ${Math.round(set.timeSeconds / 60)} minutes · Easy ${easyPct}% / Medium ${medPct}% / Hard ${hardPct}%`;
+            document.getElementById('generated-set-items').innerHTML = set.questions.map((item, index) => {
+                const source = bankById.get(item.id) || {};
+                const options = (item.opts || []).map((option, optionIndex) => {
+                    const image = item.optionImages && item.optionImages[optionIndex];
+                    return `<li>${escapeHtml(String(option).replace(/^[A-E][.)]\s*/, ''))}
+                        ${image && image.startsWith('/static/images/') ? `<img src="${escapeHtml(image)}" alt="Choice diagram">` : ''}</li>`;
+                }).join('');
+                const key = item.questionType === 'identification'
+                    ? source.answerText || ''
+                    : `${'ABCDE'[source.ans] || '?'}${item.questionType === 'both' && source.answerText ? ` / ${source.answerText}` : ''}`;
+                return `<article class="set-preview-item">
+                    <strong>${index + 1}. ${escapeHtml(item.q)}</strong>
+                    <div style="color:var(--gray-text);font-size:0.85rem;margin-top:6px;">${escapeHtml(item.domain)} · ${escapeHtml(source.cognitive || '')} · ${escapeHtml(item.difficulty)} · ${escapeHtml(item.questionType)}</div>
+                    ${item.imageUrl && item.imageUrl.startsWith('/static/images/') ? `<img src="${escapeHtml(item.imageUrl)}" alt="Question diagram">` : ''}
+                    ${options ? `<ol type="A">${options}</ol>` : ''}
+                    <div style="color:var(--teal);font-weight:600;">Answer key: ${escapeHtml(key)}</div>
+                </article>`;
+            }).join('');
+            const preview = document.getElementById('generated-set');
+            preview.hidden = false;
+            preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     </script>
 </body>

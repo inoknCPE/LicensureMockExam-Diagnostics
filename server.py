@@ -63,8 +63,8 @@ def html_page(page_name: str, request: Request) -> Response:
         raise HTTPException(status_code=404, detail="Page not found")
     if filename in {"exam.html", "results.html"}:
         session = current_session(request)
-        if session and session[0]["role"] == "EXAMINER":
-            raise HTTPException(status_code=403, detail="Examiners manage questions rather than take exams.")
+        if session and session[0]["role"] in {"ADMIN", "EXAMINER"}:
+            raise HTTPException(status_code=403, detail="This role manages exams rather than taking them.")
     allowed = PAGE_ROLES.get(filename)
     if allowed:
         session = current_session(request)
@@ -79,6 +79,7 @@ def html_page(page_name: str, request: Request) -> Response:
 
 app.mount("/css", StaticFiles(directory=APP_DIR / "css"), name="css")
 app.mount("/js", StaticFiles(directory=APP_DIR / "js"), name="js")
+app.mount("/static/images", StaticFiles(directory=APP_DIR / "static" / "images"), name="question-images")
 
 
 if __name__ == "__main__":

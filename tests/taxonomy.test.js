@@ -81,6 +81,23 @@ test('guest exams are practice-only and capped at ten questions', () => {
     }
 });
 
+test('admin generates a preview without starting an answer-taking exam', () => {
+    session.delete('cpedle_active_exam');
+    vm.runInContext("sessionUser = { role: 'ADMIN' }", context);
+    const preview = vm.runInContext(
+        "CpedleDB.generateExam({ domain: 'Network Engineer', count: 1, easyPct: 100, medPct: 0, hardPct: 0, preview: true })",
+        context
+    );
+    assert.equal(preview.questions.length, 1);
+    assert.equal(session.has('cpedle_active_exam'), false);
+    assert.throws(() => vm.runInContext("CpedleDB.generateExam({ mode: 'mock' })", context),
+        /cannot take exams/);
+    const html = fs.readFileSync(path.join(root, 'admin-generator.html'), 'utf8');
+    assert.match(html, /renderGeneratedSet\(set\)/);
+    assert.doesNotMatch(html, /window\.location\.href\s*=\s*['"]exam\.html/);
+    vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
+});
+
 test('no frontend page still mentions Civil Engineering', () => {
     for (const file of fs.readdirSync(root).filter(name => name.endsWith('.html'))) {
         const html = fs.readFileSync(path.join(root, file), 'utf8');

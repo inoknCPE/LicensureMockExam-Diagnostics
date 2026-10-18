@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("CPEDLE_DB_PATH", ROOT / "data" / "cpedle.sqlite3"))
+QUESTION_BANK_PATH = ROOT / "data" / "questionbank.db"
 SESSION_SECONDS = 12 * 60 * 60
 MAX_ATTEMPTS = 3
 SPECIAL = set("!@#$%^&*()_+-=[]{};:'\"\\|,.<>/?`~")
@@ -72,6 +73,65 @@ def db() -> Iterator[sqlite3.Connection]:
         raise
     finally:
         connection.close()
+
+
+@contextmanager
+def question_bank() -> Iterator[sqlite3.Connection | None]:
+    """Open the team-supplied bank read-only; never mix it with account data."""
+    if not QUESTION_BANK_PATH.is_file():
+        yield None
+        return
+    connection = sqlite3.connect(QUESTION_BANK_PATH.as_uri() + "?mode=ro", uri=True)
+    connection.row_factory = sqlite3.Row
+    try:
+        yield connection
+    finally:
+        connection.close()
+
+
+def imported_questions(include_answers: bool = False) -> list[dict]:
+    with question_bank() as bank:
+        if bank is None:
+            return []
+        rows = bank.execute("""
+            SELECT q.id, q.question_text, q.question_type, q.image_path,
+                   q.answer_letter, q.answer_text, q.cognitive_level, q.difficulty,
+                   d.name AS domain
+            FROM questions q JOIN domains d ON d.id=q.domain_id ORDER BY q.id
+        """).fetchall()
+        choices = {}
+        for choice in bank.execute(
+            "SELECT question_id,letter,choice_text,image_path FROM choices ORDER BY question_id,letter"
+        ):
+            choices.setdefault(choice["question_id"], []).append(choice)
+    result = []
+    for row in rows:
+        options = choices.get(row["id"], [])
+        item = {
+            "id": f"QB-{row['id']}", "q": row["question_text"],
+            "opts": [option["choice_text"] or "" for option in options],
+            "optionImages": [bank_image_url(option["image_path"]) for option in options],
+            "imageUrl": bank_image_url(row["image_path"]),
+            "questionType": row["question_type"], "source": "imported",
+            "domain": row["domain"], "cognitive": row["cognitive_level"],
+            "difficulty": row["difficulty"], "explanation": "",
+        }
+        if include_answers:
+            item["ans"] = next((i for i, option in enumerate(options)
+                                if option["letter"] == row["answer_letter"]), None)
+            item["answerText"] = row["answer_text"]
+        result.append(item)
+    return result
+
+
+def bank_image_url(path: str | None) -> str | None:
+    """Only expose image names within the committed static/images directory."""
+    if not path or not path.startswith("images/"):
+        return None
+    relative = Path(path)
+    if ".." in relative.parts or relative.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return None
+    return "/static/" + relative.as_posix()
 
 
 def initialize() -> None:
@@ -354,7 +414,7 @@ class RequestStatusIn(BaseModel):
 
 class AnswerIn(BaseModel):
     id: str
-    userAns: int | None = None
+    userAns: int | str | None = None
 
 
 class ExamSubmission(BaseModel):
@@ -377,9 +437,12 @@ def bootstrap(request: Request) -> dict:
         ]
         for q in questions:
             q.pop("opts_json", None)
+            q["questionType"] = "multiple_choice"
+            q["source"] = "local"
             if not user or user["role"] not in {"ADMIN", "EXAMINER"}:
                 q.pop("ans", None)
                 q.pop("explanation", None)
+        questions.extend(imported_questions(bool(user and user["role"] in {"ADMIN", "EXAMINER"})))
         requests = []
         history = []
         if user and user["role"] in {"STUDENT", "ADMIN"}:
@@ -606,6 +669,8 @@ def decide_reset(request_id: int, payload: DecisionIn, admin: dict = Depends(rol
 
 
 def validate_question(payload: QuestionIn) -> None:
+    if payload.id and payload.id.startswith("QB-"):
+        raise HTTPException(422, "QB- IDs are reserved for the imported question bank.")
     if (len(payload.opts) != 4 or any(not option.strip() or len(option) > 500 for option in payload.opts)
             or payload.ans not in range(4) or payload.domain not in DOMAINS
             or payload.cognitive not in COGNITIVE or payload.difficulty not in DIFFICULTIES):
@@ -794,20 +859,61 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     ids = [item.id for item in payload.answers]
     if len(ids) != len(set(ids)):
         raise HTTPException(422, "Duplicate question IDs are not allowed.")
-    rows = connection.execute(
-        f"SELECT id,ans,domain FROM questions WHERE id IN ({','.join('?' for _ in ids)})",
-        ids,
-    ).fetchall()
-    lookup = {row["id"]: row for row in rows}
+    local_ids = [item for item in ids if not item.startswith("QB-")]
+    imported_ids = [item for item in ids if item.startswith("QB-")]
+    lookup = {}
+    if local_ids:
+        rows = connection.execute(
+            f"SELECT id,ans,domain FROM questions WHERE id IN ({','.join('?' for _ in local_ids)})",
+            local_ids,
+        ).fetchall()
+        lookup.update({row["id"]: {**dict(row), "type": "local"} for row in rows})
+    if imported_ids:
+        numbers = [item[3:] for item in imported_ids]
+        if any(not number.isdigit() for number in numbers):
+            raise HTTPException(422, "Invalid question ID.")
+        with question_bank() as bank:
+            if bank is not None:
+                rows = bank.execute(
+                    f"""SELECT q.id,q.question_type,q.answer_letter,d.name AS domain
+                        FROM questions q JOIN domains d ON d.id=q.domain_id
+                        WHERE q.id IN ({','.join('?' for _ in numbers)})""",
+                    numbers,
+                ).fetchall()
+                for row in rows:
+                    number = row["id"]
+                    answer_rows = bank.execute(
+                        "SELECT answer_norm FROM accepted_answers WHERE question_id=?", (number,)
+                    ).fetchall()
+                    letters = [item["letter"] for item in bank.execute(
+                        "SELECT letter FROM choices WHERE question_id=? ORDER BY letter", (number,)
+                    )]
+                    lookup[f"QB-{number}"] = {
+                        "domain": row["domain"], "type": row["question_type"],
+                        "answer_index": letters.index(row["answer_letter"])
+                        if row["answer_letter"] in letters else None,
+                        "accepted": {normalize_answer(item["answer_norm"]) for item in answer_rows},
+                    }
     if len(lookup) != len(ids):
         raise HTTPException(422, "One or more questions no longer exist.")
     stats: dict[str, dict[str, int]] = {}
     correct = 0
     for answer in payload.answers:
-        if answer.userAns is not None and answer.userAns not in range(4):
-            raise HTTPException(422, "Invalid answer index.")
         row = lookup[answer.id]
-        match = answer.userAns == row["ans"]
+        if row["type"] == "local":
+            if answer.userAns is not None and (not isinstance(answer.userAns, int) or answer.userAns not in range(4)):
+                raise HTTPException(422, "Invalid answer index.")
+            match = answer.userAns is not None and answer.userAns == row["ans"]
+        elif isinstance(answer.userAns, int):
+            if answer.userAns not in range(5) or row["type"] == "identification":
+                raise HTTPException(422, "Invalid answer index.")
+            match = answer.userAns == row["answer_index"]
+        elif isinstance(answer.userAns, str):
+            if row["type"] == "multiple_choice" or len(answer.userAns) > 500:
+                raise HTTPException(422, "Invalid identification answer.")
+            match = bool(answer.userAns.strip()) and normalize_answer(answer.userAns) in row["accepted"]
+        else:
+            match = False
         correct += int(match)
         stat = stats.setdefault(row["domain"], {"total": 0, "correct": 0})
         stat["total"] += 1
@@ -824,6 +930,11 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         "title": payload.title or "Practice Drill", "scorePct": pct,
         "totalItems": len(ids), "correctItems": correct, "domains": domains,
     }
+
+
+def normalize_answer(value: str) -> str:
+    # Match the source bank's answer_norm convention (lowercase, trimmed spaces).
+    return " ".join(value.lower().split())
 
 
 @router.post("/exams/practice-score")

@@ -177,10 +177,10 @@
             // Animate SVG Ring
             const svgCircle = document.getElementById('svg-score-circle');
             const svgText = document.getElementById('svg-score-text');
+            svgText.textContent = `${latest.scorePct}%`;
             setTimeout(() => {
                 svgCircle.setAttribute('stroke-dasharray', `${latest.scorePct}, 100`);
                 svgCircle.style.stroke = latest.scorePct >= 75 ? 'var(--teal)' : (latest.scorePct >= 60 ? '#D97706' : 'var(--coral)');
-                svgText.innerText = `${latest.scorePct}%`;
             }, 100);
 
             // Badge Setup

@@ -57,7 +57,7 @@
     <section class="section-padding container" style="max-width: 840px;">
         <div class="card" style="padding: 40px;">
             <h1 class="text-center" style="font-size: 2.3rem;">Build a Custom Mock Exam</h1>
-            <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 600px;">Tailor the question pool, time limits, and difficulty distribution to your Computer Engineering review focus.</p>
+            <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 600px;">Choose your exam size, scope, and difficulty. Mock exams follow the approved domain and cognitive-level TOS weights.</p>
 
             <form id="gen-form">
                 <!-- Domain Selection -->
@@ -72,11 +72,8 @@
                 <div class="split-layout" style="gap: 20px; margin-bottom: 15px;">
                     <div class="form-group">
                         <label for="gen-count">Target Question Count</label>
-                        <select id="gen-count">
-                            <option value="5">5 Questions (Speed Drill)</option>
-                            <option value="10" selected>10 Questions (Standard Mock)</option>
-                            <option value="20">20 Questions (In-Depth Simulation)</option>
-                        </select>
+                        <input type="number" id="gen-count" min="1" max="200" step="1" value="20" required>
+                        <small>1–10: short practice (score only, not saved). 11–200: TOS mock exam, subject to bank availability.</small>
                     </div>
 
                     <div class="form-group">
@@ -132,7 +129,9 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Generate Mock Exam Set →</button>
+                <div id="tos-preview" style="background: var(--bg); padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid var(--border);" aria-live="polite"></div>
+                <p id="gen-error" role="alert" style="display: none; color: var(--coral); margin-bottom: 15px;"></p>
+                <button type="submit" id="gen-submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Generate Mock Exam Set →</button>
             </form>
         </div>
     </section>
@@ -204,6 +203,35 @@
             const badge = document.getElementById('slider-sum-badge');
             badge.innerText = `Total: ${sum}% (${sum === 100 ? 'Balanced' : 'Adjusting...'})`;
             badge.style.color = sum === 100 ? 'var(--teal)' : 'var(--coral)';
+            updateTosPreview();
+        }
+
+        function updateTosPreview() {
+            const preview = document.getElementById('tos-preview');
+            const count = Number(document.getElementById('gen-count').value);
+            const domain = document.getElementById('gen-domain').value;
+            document.getElementById('gen-submit').textContent = count >= 1 && count <= 10
+                ? 'Start Short Practice Drill →' : 'Generate Mock Exam Set →';
+            if (count <= 10 && count >= 1) {
+                preview.textContent = 'Short practice: your score is shown after the drill but is not saved. Full TOS quotas apply to mock exams above 10 items.';
+                return;
+            }
+            try {
+                const plan = CpedleDB.getTosPlan({ count, domain,
+                    easyPct: currentEasy, medPct: currentMed, hardPct: currentHard });
+                const list = counts => Object.entries(counts).filter(([, amount]) => amount > 0)
+                    .map(([name, amount]) => `${name.replace('|', ' — ')}: ${amount}`).join(' · ');
+                const coveredDomains = Object.values(plan.domains).filter(amount => amount > 0).length;
+                const coverageNote = coveredDomains < Object.keys(plan.domains).length
+                    ? `\nCoverage note: ${coveredDomains} of ${Object.keys(plan.domains).length} domains receive an item at this count.` : '';
+                preview.textContent = `Planned TOS for ${count} items (whole-question rounding):\n` +
+                    `Domains: ${list(plan.domains)}\n` +
+                    `Cognitive levels: ${list(plan.cognitive)}\n` +
+                    `Difficulty: ${list(plan.difficulty)}${coverageNote}\nBank availability is checked when you generate.`;
+                preview.style.whiteSpace = 'pre-line';
+            } catch (error) {
+                preview.textContent = error.message;
+            }
         }
 
         function balanceSliders(changed) {
@@ -228,26 +256,37 @@
             syncLabels();
         }
 
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const requestedDomain = new URLSearchParams(window.location.search).get('domain');
+            const domainSelect = document.getElementById('gen-domain');
+            if (requestedDomain && [...domainSelect.options].some(option => option.value === requestedDomain)) {
+                domainSelect.value = requestedDomain;
+            }
+            updateTosPreview();
+        });
+        document.getElementById('gen-domain').addEventListener('change', updateTosPreview);
+        document.getElementById('gen-count').addEventListener('input', updateTosPreview);
+
         document.getElementById('gen-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const count = parseInt(document.getElementById('gen-count').value);
             const timeMinutes = parseInt(document.getElementById('gen-time').value);
             const domain = document.getElementById('gen-domain').value;
-
-            const exam = CpedleDB.generateExam({
-                count,
-                timeMinutes,
-                domain,
-                easyPct: currentEasy,
-                medPct: currentMed,
-                hardPct: currentHard
-            });
-
-            if (!exam.questions.length) {
-                alert('No questions are available for this selection yet.');
-                return;
+            const errorBox = document.getElementById('gen-error');
+            errorBox.style.display = 'none';
+            try {
+                const exam = CpedleDB.generateExam({
+                    count, timeMinutes, domain,
+                    easyPct: currentEasy, medPct: currentMed, hardPct: currentHard,
+                    mode: count <= 10 ? 'practice' : 'mock'
+                });
+                if (!exam.questions.length) throw new Error('No questions are available for this selection yet.');
+                window.location.href = 'exam.html';
+            } catch (error) {
+                errorBox.textContent = error.message;
+                errorBox.style.display = 'block';
             }
-            window.location.href = 'exam.html';
         });
     </script>
 </body>

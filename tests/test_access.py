@@ -220,6 +220,14 @@ class AccessTests(unittest.TestCase):
             ), admin["user"])
         self.assertEqual(duplicate.exception.status_code, 409)
 
+    def test_admin_cannot_open_exam_or_results_pages(self):
+        _, cookie = self.login_admin()
+        for page in ("exam", "results"):
+            with self.subTest(page=page), self.assertRaises(HTTPException) as error:
+                html_page(page, request(cookie))
+            self.assertEqual(error.exception.status_code, 403)
+        self.assertEqual(html_page("exam", request()).status_code, 200)
+
     def test_student_mock_score_is_saved_by_server(self):
         student, _ = self.register_student()
         result = backend.submit_exam(backend.ExamSubmission(
@@ -227,6 +235,43 @@ class AccessTests(unittest.TestCase):
             answers=[backend.AnswerIn(id="CPE-NET-001", userAns=2)],
         ), student["user"])
         self.assertEqual(result["scorePct"], 100)
+        with backend.db() as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM exam_history").fetchone()[0], 1)
+
+    @unittest.skipUnless(backend.QUESTION_BANK_PATH.is_file(), "Team question bank not installed")
+    def test_imported_question_types_are_server_graded_without_guest_history(self):
+        imported = backend.imported_questions()
+        self.assertEqual(len(imported), 1200)
+        self.assertEqual({q["questionType"] for q in imported},
+                         {"identification", "multiple_choice", "both"})
+        self.assertEqual(imported[4]["id"], "QB-5")
+        self.assertEqual(len(imported[4]["opts"]), 5)
+        self.assertTrue(next(q for q in imported if q["id"] == "QB-151")["imageUrl"])
+        guest_questions = backend.bootstrap(request())["questions"]
+        for question in guest_questions:
+            self.assertNotIn("ans", question)
+            self.assertNotIn("answerText", question)
+        result = backend.practice_score(backend.ExamSubmission(
+            title="Imported practice",
+            answers=[
+                backend.AnswerIn(id="QB-1", userAns="local area network"),
+                backend.AnswerIn(id="QB-2", userAns=3),
+                backend.AnswerIn(id="QB-3", userAns="seven"),
+                backend.AnswerIn(id="QB-5", userAns=4),
+            ],
+        ), request(method="POST"))
+        self.assertEqual(result["scorePct"], 100)
+        with backend.db() as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM exam_history").fetchone()[0], 0)
+        wrong = backend.practice_score(backend.ExamSubmission(
+            title="Wrong answer", answers=[backend.AnswerIn(id="QB-2", userAns=0)]
+        ), request(method="POST"))
+        self.assertEqual(wrong["scorePct"], 0)
+        student, _ = self.register_student()
+        saved = backend.submit_exam(backend.ExamSubmission(
+            title="Imported mock", answers=[backend.AnswerIn(id="QB-3", userAns=0)]
+        ), student["user"])
+        self.assertEqual(saved["scorePct"], 100)
         with backend.db() as connection:
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM exam_history").fetchone()[0], 1)
 
