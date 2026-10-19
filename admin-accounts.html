@@ -75,10 +75,9 @@
             <div class="nav__options" id="admin-nav-bar">
                 <a class="link" href="admin-dashboard.html">OVERVIEW</a>
                 <a class="link" href="test-bank.html">TEST BANK</a>
-                <a class="link" href="admin-generator.html">GENERATOR</a>
-                <a class="link" href="admin-requests.html">REQUESTS</a>
                 <a class="link" href="admin-accounts.html" style="color: var(--teal); font-weight: 700;">ACCOUNTS</a>
                 <a class="link" href="admin-question-approvals.html">QUESTION APPROVALS</a>
+                <a class="link" href="admin-reports.html">REPORTS</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -101,10 +100,22 @@
             <!-- HEADER BLOCK -->
             <div class="admin-page-header">
                 <h1 class="serif-heading">Accounts, Roles & Locked Users</h1>
-                <p>New registrations default to Student role. Only an administrator can grant Examiner or Admin privileges.</p>
+                <p>Student accounts register immediately. Examiner applications require your approval before the applicant can sign in.</p>
+            </div>
+
+            <h2 class="serif-heading admin-section-title" style="margin-top:24px;">Pending Examiner Registrations</h2>
+            <p style="color:var(--gray-text); margin-bottom:14px;">Review the applicant's title and license number before deciding. License numbers are not automatically verified.</p>
+            <div class="table-card-wrapper">
+                <div class="table-responsive" style="margin-top:0;">
+                    <table class="cpedle-table">
+                        <thead><tr><th>Name / Username</th><th>Email</th><th>Title</th><th>License Number</th><th>Submitted</th><th>Action</th></tr></thead>
+                        <tbody id="examiner-applications-tbody"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- ACCOUNTS TABLE -->
+            <h2 class="serif-heading admin-section-title">Registered Accounts</h2>
             <div class="table-card-wrapper">
                 <div class="table-responsive" style="margin-top: 0;">
                     <table class="cpedle-table">
@@ -164,6 +175,8 @@
         async function loadAccountsData() {
             let users = [];
             let pendingResets = [];
+            let examinerApplications = [];
+            let applicationsLoadError = false;
 
             try {
                 users = await apiCall('/admin/users');
@@ -174,11 +187,38 @@
             }
 
             try {
+                examinerApplications = await apiCall('/admin/examiner-applications');
+            } catch (e) {
+                applicationsLoadError = true;
+                document.getElementById('examiner-applications-tbody').innerHTML =
+                    `<tr><td colspan="6">Unable to load examiner applications: ${escapeHtml(e.message)}</td></tr>`;
+            }
+
+            try {
                 pendingResets = await apiCall('/admin/reset-requests');
             } catch (e) {
                 document.getElementById('resets-tbody').innerHTML =
                     `<tr><td colspan="3">Unable to load reset requests: ${escapeHtml(e.message)}</td></tr>`;
                 return;
+            }
+
+            const applicationsBody = document.getElementById('examiner-applications-tbody');
+            if (examinerApplications.length) {
+                applicationsBody.innerHTML = examinerApplications.map(app => `
+                    <tr>
+                        <td><strong>${escapeHtml(app.name)}</strong><br><small>${escapeHtml(app.username)}</small></td>
+                        <td>${escapeHtml(app.email)}</td>
+                        <td>${escapeHtml(app.title)}</td>
+                        <td>${escapeHtml(app.license_number)}</td>
+                        <td>${escapeHtml(app.created_at)}</td>
+                        <td style="white-space:nowrap;">
+                            <button class="btn-outline-pill" style="padding:4px 12px; font-size:0.78rem; color:var(--coral); border-color:var(--coral);" onclick="decideExaminer('${app.id}', false)">Reject</button>
+                            <button class="btn-solid-pill" style="padding:4px 12px; font-size:0.78rem;" onclick="decideExaminer('${app.id}', true)">Approve</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else if (!applicationsLoadError) {
+                applicationsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px;">No pending examiner registrations.</td></tr>';
             }
 
             // Render User Accounts
@@ -189,20 +229,23 @@
             } else {
                 users.forEach(u => {
                     const tr = document.createElement('tr');
+                    const reviewRequired = u.role === 'EXAMINER' && u.examiner_status !== 'approved';
+                    const status = reviewRequired ? (u.examiner_status === 'pending' ? 'Pending approval' : 'Rejected')
+                        : u.is_locked ? 'Locked' : 'Active';
                     tr.innerHTML = `
                         <td style="font-weight: 600; color: var(--navy);">${escapeHtml(u.username)}</td>
                         <td style="color: var(--gray-text);">${escapeHtml(u.email)}</td>
                         <td>${escapeHtml(u.name || u.username)}</td>
                         <td>
-                            <select onchange="updateRole('${u.id}', this.value)">
+                            ${reviewRequired ? 'EXAMINER' : `<select onchange="updateRole('${u.id}', this.value)">
                                 <option value="STUDENT" ${u.role === 'STUDENT' ? 'selected' : ''}>STUDENT</option>
                                 <option value="EXAMINER" ${u.role === 'EXAMINER' ? 'selected' : ''}>EXAMINER</option>
                                 <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
-                            </select>
+                            </select>`}
                         </td>
-                        <td><span class="deficiency-tag ${u.is_locked ? 'tag-deficient' : 'tag-proficient'}">${u.is_locked ? 'Locked' : 'Active'}</span></td>
+                        <td><span class="deficiency-tag ${status === 'Active' ? 'tag-proficient' : 'tag-deficient'}">${escapeHtml(status)}</span></td>
                         <td style="text-align: right;">
-                            ${u.is_locked ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
+                            ${u.is_locked && !reviewRequired ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
                         </td>
                     `;
                     uTbody.appendChild(tr);
@@ -227,6 +270,18 @@
                     `;
                     rTbody.appendChild(tr);
                 });
+            }
+        }
+
+        async function decideExaminer(userId, approve) {
+            if (!confirm(`${approve ? 'Approve' : 'Reject'} this examiner registration?`)) return;
+            try {
+                await apiCall(`/admin/examiner-applications/${userId}/decision`, {
+                    method: 'POST', body: JSON.stringify({ approve })
+                });
+                await loadAccountsData();
+            } catch (err) {
+                alert('Could not review examiner registration: ' + err.message);
             }
         }
 

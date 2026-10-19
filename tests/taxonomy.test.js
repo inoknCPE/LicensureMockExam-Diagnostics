@@ -76,25 +76,23 @@ test('guest exams are practice-only and capped at ten questions', () => {
     for (const file of ['index.html', 'subjects.html']) {
         const html = fs.readFileSync(path.join(root, file), 'utf8');
         for (const match of html.matchAll(/<button[^>]*onclick="startMock\('[^']+'\)"[^>]*>/g)) {
-            assert.match(match[0], /data-student-only hidden/, `${file} hides mock exams from guests`);
+            assert.match(match[0], /data-student-only\b[^>]*\bhidden\b/, `${file} hides mock exams from guests`);
         }
     }
 });
 
-test('admin generates a preview without starting an answer-taking exam', () => {
+test('admin and examiner cannot generate exams or open retired exam-admin flows', () => {
     session.delete('cpedle_active_exam');
     vm.runInContext("sessionUser = { role: 'ADMIN' }", context);
-    const preview = vm.runInContext(
-        "CpedleDB.generateExam({ domain: 'Network Engineer', count: 1, easyPct: 100, medPct: 0, hardPct: 0, preview: true })",
-        context
-    );
-    assert.equal(preview.questions.length, 1);
-    assert.equal(session.has('cpedle_active_exam'), false);
+    assert.throws(() => vm.runInContext("CpedleDB.generateExam({ mode: 'mock', preview: true })", context),
+        /cannot take exams/);
+    vm.runInContext("sessionUser = { role: 'EXAMINER' }", context);
     assert.throws(() => vm.runInContext("CpedleDB.generateExam({ mode: 'mock' })", context),
         /cannot take exams/);
-    const html = fs.readFileSync(path.join(root, 'admin-generator.html'), 'utf8');
-    assert.match(html, /renderGeneratedSet\(set\)/);
-    assert.doesNotMatch(html, /window\.location\.href\s*=\s*['"]exam\.html/);
+    assert.equal(session.has('cpedle_active_exam'), false);
+    for (const page of ['admin-generator.html', 'admin-requests.html', 'request-form.html']) {
+        assert.equal(fs.existsSync(path.join(root, page)), false, `${page} was removed`);
+    }
     vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
 });
 
@@ -125,12 +123,14 @@ test('local HTML links point to existing pages', () => {
 
 test('every admin page shows the same navigation tabs', () => {
     const pages = [
-        'admin-dashboard.html', 'test-bank.html', 'admin-generator.html',
-        'admin-requests.html', 'admin-accounts.html', 'admin-question-approvals.html'
+        'admin-dashboard.html', 'test-bank.html',
+        'admin-accounts.html', 'admin-question-approvals.html',
+        'admin-reports.html'
     ];
     const expected = [
-        'admin-dashboard.html', 'test-bank.html', 'admin-generator.html',
-        'admin-requests.html', 'admin-accounts.html', 'admin-question-approvals.html'
+        'admin-dashboard.html', 'test-bank.html',
+        'admin-accounts.html', 'admin-question-approvals.html',
+        'admin-reports.html'
     ];
     for (const file of pages) {
         const html = fs.readFileSync(path.join(root, file), 'utf8');
@@ -139,6 +139,21 @@ test('every admin page shows the same navigation tabs', () => {
         const links = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"/g), match => match[1]);
         assert.deepEqual(links, expected, `${file} should show every admin tab in order`);
     }
+});
+
+test('examiner has a separate question submissions page and navigation tab', () => {
+    const page = fs.readFileSync(path.join(root, 'examiner-question-submissions.html'), 'utf8');
+    const bank = fs.readFileSync(path.join(root, 'test-bank.html'), 'utf8');
+    assert.match(page, /<title>Question Submissions/);
+    assert.match(page, /href="examiner-question-submissions\.html" aria-current="page"/);
+    assert.match(page, /\/questions\/change-requests/);
+    assert.doesNotMatch(bank, /id="pending-submissions"/);
+    vm.runInContext("sessionUser = { role: 'EXAMINER' }", context);
+    const nav = { innerHTML: '' };
+    context.examinerNav = nav;
+    vm.runInContext("renderSessionNavigation(examinerNav, 'examiner-question-submissions.html')", context);
+    assert.match(nav.innerHTML, /examiner-question-submissions\.html" aria-current="page"/);
+    vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
 });
 
 test('guest pages keep the same tabs and highlight their current page', () => {
@@ -167,7 +182,8 @@ test('public navigation reflects the actual server session', () => {
     assert.equal(nav.innerHTML, 'guest tabs');
     vm.runInContext("sessionUser = { role: 'STUDENT' }", context);
     vm.runInContext('renderSessionNavigation(navUnderTest)', context);
-    assert.match(nav.innerHTML, /MOCK EXAMS/);
+    assert.match(nav.innerHTML, /DISCIPLINES/);
+    assert.match(nav.innerHTML, /PRACTICE EXAM/);
     assert.match(nav.innerHTML, /LOGOUT/);
     vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
 });

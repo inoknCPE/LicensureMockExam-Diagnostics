@@ -350,6 +350,16 @@ button, input, select, textarea { font-family: var(--font-body); }
     border-radius: 8px; background-color: transparent; color: var(--text);
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--teal); }
+.practice-domain-list { display: grid; gap: 8px; margin-top: 8px; }
+#gen-domains-fieldset { border: 0; padding: 0; margin: 0 0 22px; min-width: 0; }
+#gen-domains-fieldset legend { margin-bottom: 10px; font-size: .9rem; font-weight: 600; }
+#gen-domains-fieldset .practice-domain-option {
+    display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 8px; cursor: pointer; opacity: 1;
+}
+#gen-domains-fieldset .practice-domain-option input[type="checkbox"] {
+    width: auto; flex: none; margin: 3px 0 0; padding: 0; accent-color: var(--teal);
+}
 .auth-card .btn-solid-pill { width: 100%; margin-top: 10px; }
 .auth-card .btn-solid-pill:disabled, .btn-solid-pill:disabled {
     background: #757575 !important; border-color: #757575 !important;
@@ -609,6 +619,30 @@ button, input, select, textarea { font-family: var(--font-body); }
 @media (prefers-reduced-motion: reduce) {
     .cpedle-loader { display: none !important; }
 }
+
+/* ===== TABLE OF SPECIFICATIONS PREVIEW ===== */
+.tos-preview {
+    background: var(--bg);
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 20px 0;
+}
+.tos-preview h2 { font-size: 1.35rem; margin: 0 0 4px; }
+.tos-preview__summary, .tos-preview__note { color: var(--gray-text); font-size: .9rem; }
+.tos-preview__summary { margin: 0 0 20px; }
+.tos-preview__note { margin: 18px 0 0; }
+.tos-preview__section { margin-top: 18px; }
+.tos-preview__section h3 { font-size: 1rem; margin: 0 0 8px; }
+.tos-preview__table { width: 100%; border-collapse: collapse; background: var(--surface); }
+.tos-preview__table th, .tos-preview__table td {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.tos-preview__table th { background: color-mix(in srgb, var(--teal) 10%, var(--surface)); }
+.tos-preview__table th:last-child, .tos-preview__table td:last-child { width: 110px; text-align: center; }
 
 /* ===== ONE-PAGE PAGER SYSTEM ===== */
 body.pager-page {

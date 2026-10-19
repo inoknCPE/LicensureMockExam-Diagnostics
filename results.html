@@ -30,8 +30,9 @@
                 </label>
             </div>
             <div class="nav__options" id="nav-options-bar">
-                <a class="link" href="subjects.html">MOCK EXAMS</a>
-                <a class="link" href="generator.html">GENERATOR</a>
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html">HISTORY</a>
             </div>
         </div>
@@ -79,6 +80,7 @@
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px;">
+                <a id="print-card-link" href="#" class="btn-outline-pill" style="width: 100%;" hidden>Print Performance Card / Save as PDF</a>
                 <a id="btn-remediation" href="remediation.html" class="btn-solid-pill coral-btn" style="width: 100%;">Target Deficient Topics in Remediation →</a>
                 <a id="history-link" href="exam-history.html" class="btn-outline-pill" style="width: 100%;">View Full Exam History & Breakdown</a>
             </div>
@@ -96,7 +98,7 @@
                     <a href="login.html">Examinee Portal</a>
                 </div>
                 <div class="footer-col">
-                    <a href="generator.html">Exam Generator</a>
+                    <a href="generator.html">Practice Exam</a>
                     <a href="exam-history.html">Score Reports</a>
                     <a href="remediation.html">Remediation Exams</a>
                     <a href="test-bank.html">Admin Test Bank</a>
@@ -128,8 +130,6 @@
                 navBar.innerHTML = `
                     <a class="link" href="admin-dashboard.html">ADMIN DASHBOARD</a>
                     <a class="link" href="test-bank.html">TEST BANK</a>
-                    <a class="link" href="admin-generator.html">GENERATOR</a>
-                    <a class="link" href="admin-requests.html">REQUESTS</a>
                     <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
                 `;
             } else if (user.role === 'EXAMINER') {
@@ -142,8 +142,9 @@
             } else if (user.role === 'STUDENT') {
                 navBar.innerHTML = `
                     <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
-                    <a class="link" href="subjects.html">MOCK EXAMS</a>
-                    <a class="link" href="generator.html">GENERATOR</a>
+                    <a class="link" href="subjects.html">DISCIPLINES</a>
+                    <a class="link" href="generator.html">PRACTICE EXAM</a>
+                    <a class="link" href="mock-exam.html">MOCK EXAM</a>
                     <a class="link" href="exam-history.html">HISTORY</a>
                     <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
                 `;
@@ -172,6 +173,14 @@
             }
 
             document.getElementById('exam-title-display').innerText = latest.title;
+            if (user.role === 'STUDENT' && latest.title === 'Mock Licensure Exam') {
+                document.getElementById('btn-remediation').style.display = 'none';
+            }
+            if (user.role === 'STUDENT' && Number.isInteger(latest.id)) {
+                const printLink = document.getElementById('print-card-link');
+                printLink.href = `print-report.html?type=card&id=${latest.id}`;
+                printLink.hidden = false;
+            }
             document.getElementById('score-summary').innerText = `You scored ${latest.correctItems} out of ${latest.totalItems} items correctly (${latest.scorePct}%).`;
 
             // Animate SVG Ring
@@ -233,8 +242,8 @@
 
             if (!hasDeficient && user.role !== 'GUEST') {
                 const btnRemediation = document.getElementById('btn-remediation');
-                btnRemediation.innerText = 'Start Another Custom Mock Exam';
-                btnRemediation.href = 'subjects.html';
+                btnRemediation.innerText = 'Start Another Practice Exam';
+                btnRemediation.href = 'generator.html';
                 btnRemediation.className = 'btn-solid-pill';
             }
         });

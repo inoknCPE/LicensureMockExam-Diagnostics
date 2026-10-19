@@ -1,7 +1,7 @@
 # Localhost Development Setup
 
 The Computer Engineering frontend is served by FastAPI on localhost. Accounts,
-roles, local question edits, requests, and student mock results use a local
+roles, local question edits, password-reset requests, and student mock results use a local
 SQLite database. The team's 1,200-question bank is read separately from
 `data/questionbank.db`. Guest practice is anonymous and never creates a user
 or saved score.
@@ -35,21 +35,29 @@ Examiner additions, edits, and bulk imports go to an administrator approval
 queue. They do not affect the active question bank until approved at
 `admin-question-approvals.html`. Examiners cannot delete active questions.
 
-The administrator generator assembles a temporary, reviewable set on its own
-page. It does not open the answer-taking exam, save results, or publish a set
-to students. Admin and Examiner accounts cannot access exam-taking pages.
-Set publishing is not implemented.
+Admin and Examiner accounts cannot generate or take exams. The fixed Mock Exam
+issues each student a fresh 100-question, 60-minute set within their registered
+discipline. It applies the approved domain × cognitive-level TOS weights, with
+whole-question rounding, and refuses a shortage rather than silently changing
+the required counts. Difficulty is observed, not a fixed quota for this exam.
+There is no student-to-admin mock-set request or set-publishing flow.
 
-The student generator uses the draft TOS weights in `js/data.js`: five domain
-weights and four cognitive-level weights for each discipline, plus the chosen
-Easy/Medium/Hard profile. Students choose 1–200 questions; 1–10 is an unsaved
-practice drill, while larger sets are scored as mock exams. Whole-question
-quotas use largest-remainder rounding. The generator checks all three margins
-against the question bank and refuses an impossible mix instead of silently
-substituting questions. Some combinations, especially Easy-heavy profiles,
-are unavailable because the imported bank's difficulty and cognitive tags
-are correlated. The on-page TOS preview shows targets, not a feasibility
-guarantee; feasibility is checked when the student generates the set.
+The separate Practice Exam (`generator.html`) lets students choose any
+combination of their discipline's five domains, 1–200 questions, 5–300 minutes,
+and a difficulty target. It spreads questions as evenly as possible across the
+selected domains and adjusts difficulty when the bank cannot meet the target.
+Student practice results are saved in exam history but excluded from the admin
+mock-exam roster. Guest practice drills remain limited to 10 questions and are
+not saved.
+
+Students can print an individual diagnostic performance card from Results or
+from any attempt in Exam History. The administrator's Reports tab provides a
+filterable, printable cohort roster and per-attempt TOS compliance sheets.
+The browser's print dialog can also save these as PDF. New mock attempts save
+the server-calculated planned quotas and actual delivered question-tag counts;
+older attempts and remediation drills have no planned TOS snapshot and are
+marked unavailable rather than reconstructed. The TOS sheet is internal
+distribution evidence, not an external accreditation certificate.
 
 If you forget the only administrator's password, run
 `reset-admin-password.bat` locally. It prompts for that administrator's

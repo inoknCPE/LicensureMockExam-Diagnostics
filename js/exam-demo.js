@@ -38,7 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Initialize or read existing timer
-    if (!activeExam.remainingSeconds && activeExam.remainingSeconds !== 0) {
+    if (activeExam.mode === 'licensure' && activeExam.startedAt) {
+        activeExam.remainingSeconds = Math.max(0, activeExam.timeSeconds -
+            (Math.floor(Date.now() / 1000) - activeExam.startedAt));
+    } else if (!activeExam.remainingSeconds && activeExam.remainingSeconds !== 0) {
         activeExam.remainingSeconds = activeExam.timeSeconds || 3600;
     }
 
@@ -159,25 +162,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             elOptions.appendChild(btn);
         });
-        if (currentQ.questionType === 'both') {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.maxLength = 500;
-            input.className = 'answer-input';
-            input.style.cssText = 'box-sizing:border-box;width:100%;padding:12px 0;border:0;border-radius:0;outline:none;box-shadow:none;appearance:none;background:transparent;color:var(--text);font:inherit;';
-            input.placeholder = 'Or type your answer';
-            input.setAttribute('aria-label', 'Alternative written answer');
-            input.style.marginTop = '12px';
-            input.value = typeof currentQ.userAns === 'string' ? currentQ.userAns : '';
-            input.addEventListener('input', () => {
-                currentQ.userAns = input.value;
-                CpedleDB.saveActiveExamState(activeExam);
-                elOptions.querySelectorAll('.option-btn').forEach(button => button.classList.remove('selected'));
-                updatePalette();
-            });
-            elOptions.appendChild(input);
-        }
-        
         elPrev.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
         elNext.innerText = currentIndex === questions.length - 1 ? 'Submit Exam' : 'Next Question';
         
@@ -188,6 +172,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let submitting = false;
+    let exitDialog = null;
+    let tabWarningDialog = null;
+    let examTabWasHidden = false;
+    if (activeExam.mode === 'licensure') {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                examTabWasHidden = true;
+                return;
+            }
+            if (!examTabWasHidden) return;
+            examTabWasHidden = false;
+            if (submitting || tabWarningDialog || !CpedleDB.getActiveExam() ||
+                (activeExam.startedAt && Date.now() / 1000 - activeExam.startedAt >= activeExam.timeSeconds)) return;
+
+            const dialog = document.createElement('dialog');
+            tabWarningDialog = dialog;
+            dialog.className = 'logout-dialog';
+            dialog.setAttribute('aria-labelledby', 'tab-warning-title');
+            dialog.setAttribute('aria-describedby', 'tab-warning-note');
+            dialog.innerHTML = `
+                <div class="logout-dialog__card">
+                    <p id="tab-warning-title"><strong>Tab-switching warning</strong></p>
+                    <p id="tab-warning-note">You left the exam tab or window. In a real licensure exam, tab switching is strictly not allowed.</p>
+                    <p><strong>Galatians 6:7–8</strong> – <em>"Do not be deceived: God cannot be mocked. A man reaps what he sows."</em></p>
+                    <button type="button" class="logout-dialog__cancel">Continue Exam</button>
+                </div>`;
+            dialog.addEventListener('close', () => {
+                dialog.remove();
+                tabWarningDialog = null;
+            }, { once: true });
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            const continueButton = dialog.querySelector('button');
+            continueButton.addEventListener('click', () => dialog.close());
+            continueButton.focus();
+        });
+    }
+    document.getElementById('exit-exam')?.addEventListener('click', () => {
+        if (submitting || exitDialog) return;
+        const dialog = document.createElement('dialog');
+        exitDialog = dialog;
+        dialog.className = 'logout-dialog';
+        dialog.setAttribute('aria-labelledby', 'exit-exam-title');
+        dialog.innerHTML = `
+            <form method="dialog" class="logout-dialog__card">
+                <svg class="logout-dialog__icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                    <path d="M13 15h31a4 4 0 0 1 4 4v42a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4V19a4 4 0 0 1 4-4Z" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="m16 19 28 7v37l-28-7V19Z" fill="#FFBFC2" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M45 40h26m-9-9 9 9-9 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p id="exit-exam-title">Are you sure you want to exit?<br>Your answers and score will not be recorded.</p>
+                <button type="submit" value="cancel" class="logout-dialog__cancel">No, Continue Exam</button>
+                <button type="submit" value="confirm" class="logout-dialog__confirm">Yes, Exit Without Saving</button>
+            </form>`;
+        dialog.addEventListener('close', () => {
+            const confirmed = dialog.returnValue === 'confirm';
+            dialog.remove();
+            exitDialog = null;
+            if (!confirmed || submitting) return;
+            clearInterval(timerInterval);
+            CpedleDB.discardActiveExam();
+            window.location.href = activeExam.mode === 'licensure' ? 'mock-exam.html'
+                : isGuest ? 'subjects.html' : 'generator.html';
+        }, { once: true });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        dialog.querySelector('.logout-dialog__cancel').focus();
+    });
     async function submitExam(force = false) {
         if (submitting) return;
         const unanswered = questions.filter(q => q.userAns === null || q.userAns === undefined || q.userAns === '').length;
@@ -245,11 +297,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Timer Loop
     const timerInterval = setInterval(async () => {
-        activeExam.remainingSeconds--;
+        activeExam.remainingSeconds = activeExam.mode === 'licensure' && activeExam.startedAt
+            ? Math.max(0, activeExam.timeSeconds - (Math.floor(Date.now() / 1000) - activeExam.startedAt))
+            : activeExam.remainingSeconds - 1;
         CpedleDB.saveActiveExamState(activeExam);
 
         if (activeExam.remainingSeconds <= 0) {
             clearInterval(timerInterval);
+            if (exitDialog) exitDialog.close('cancel');
+            if (tabWarningDialog) tabWarningDialog.close();
             alert('Time has expired! Submitting your answers automatically.');
             await submitExam(true);
             return;

@@ -10,7 +10,15 @@
 <body>
     <nav class="new-nav"><div class="nav__content">
         <a class="nav-logo-box" href="index.html"><span>cpedle</span></a>
-        <div class="nav__options"><button class="link" onclick="CpedleDB.logout()">LOGOUT</button></div>
+        <div class="nav__control">
+            <input type="checkbox" id="menu" class="sr-only">
+            <label for="menu"><span class="sr-only">Toggle Menu</span>
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                </svg>
+            </label>
+        </div>
+        <div class="nav__options" id="profile-nav-bar"><button class="link" onclick="CpedleDB.logout()">LOGOUT</button></div>
     </div></nav>
     <div class="auth-wrapper"><div class="card auth-card">
         <h1>Personalize Your Profile</h1>
@@ -22,6 +30,8 @@
                 <input id="profile-role" type="text" readonly></div>
             <div id="discipline-group" class="form-group"><label for="profile-discipline">Discipline</label>
                 <select id="profile-discipline" required><option value="">Select your discipline</option></select></div>
+            <div id="professional-title-group" class="form-group" hidden><label for="profile-professional-title">Professional title</label>
+                <input id="profile-professional-title" type="text" readonly></div>
             <p id="profile-error" role="alert" style="color:var(--coral)"></p>
             <button class="btn-solid-pill" type="submit">Save Profile</button>
         </form>
@@ -41,6 +51,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await CpedleDB.ready;
             const user = CpedleDB.getCurrentUser();
+            if (user.role === 'EXAMINER') {
+                renderSessionNavigation(document.getElementById('profile-nav-bar'), 'profile.html');
+            }
             if (user.role === 'GUEST') {
                 window.location.href = 'login.html';
                 return;
@@ -53,6 +66,13 @@
                 document.getElementById('discipline-group').style.display = 'none';
                 document.getElementById('profile-description').textContent =
                     'Administrators manage accounts and system access; no exam discipline is required.';
+                select.required = false;
+            } else if (user.role === 'EXAMINER') {
+                document.getElementById('discipline-group').hidden = true;
+                document.getElementById('professional-title-group').hidden = false;
+                document.getElementById('profile-professional-title').value = user.professionalTitle || '';
+                document.getElementById('profile-description').textContent =
+                    'Your professional title was provided with your approved examiner application.';
                 select.required = false;
             }
             Object.keys(DISCIPLINES).forEach(discipline => {

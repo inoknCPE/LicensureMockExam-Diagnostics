@@ -9,9 +9,19 @@
 </head>
 <body>
     <nav class="new-nav"><div class="nav__content">
-        <a class="nav-logo-box" href="index.html"><span>cpedle Examiner</span></a>
-        <div class="nav__options">
+        <a class="nav-logo-box" href="examiner-dashboard.html"><span>cpedle Examiner</span></a>
+        <div class="nav__control">
+            <input type="checkbox" id="menu" class="sr-only">
+            <label for="menu"><span class="sr-only">Toggle Menu</span>
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                </svg>
+            </label>
+        </div>
+        <div class="nav__options" id="examiner-nav-bar">
+            <a class="link" href="examiner-dashboard.html" aria-current="page">DASHBOARD</a>
             <a class="link" href="test-bank.html">QUESTION BANK</a>
+            <a class="link" href="examiner-question-submissions.html">QUESTION SUBMISSIONS</a>
             <a class="link" href="profile.html">PROFILE</a>
             <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
         </div>
@@ -30,8 +40,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await CpedleDB.ready;
             const user = CpedleDB.getCurrentUser();
+            renderSessionNavigation(document.getElementById('examiner-nav-bar'), 'examiner-dashboard.html');
             document.getElementById('examiner-greeting').textContent =
-                `${user.name || user.username} • ${user.discipline || 'No discipline selected'}`;
+                `${user.name || user.username} • ${user.professionalTitle || 'Examiner'}`;
             document.getElementById('question-count').textContent =
                 `${CpedleDB.getQuestions().length} question(s) currently in the bank.`;
         });

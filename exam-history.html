@@ -35,8 +35,9 @@
             </div>
             <div class="nav__options" id="nav-options-bar">
                 <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
-                <a class="link" href="subjects.html">MOCK EXAMS</a>
-                <a class="link" href="generator.html">GENERATOR</a>
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html" aria-current="page">HISTORY</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
@@ -58,9 +59,8 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
             <div>
                 <h1 style="font-size: 2.4rem;">Exam Performance History</h1>
-                <p style="color: var(--gray-text); font-size: 0.95rem;">Review prior mock exams and click any attempt to inspect topic deficiencies.</p>
+                <p style="color: var(--gray-text); font-size: 0.95rem;">Review prior mock and practice exams and inspect topic deficiencies.</p>
             </div>
-            <a href="subjects.html" class="btn-solid-pill">Start New Mock Exam</a>
         </div>
 
         <div id="history-container" style="display: flex; flex-direction: column; gap: 20px;">
@@ -79,7 +79,7 @@
                     <a href="login.html">Examinee Portal</a>
                 </div>
                 <div class="footer-col">
-                    <a href="generator.html">Exam Generator</a>
+                    <a href="generator.html">Practice Exam</a>
                     <a href="exam-history.html">Score Reports</a>
                     <a href="remediation.html">Remediation Exams</a>
                     <a href="test-bank.html">Admin Test Bank</a>
@@ -111,8 +111,7 @@
                 container.innerHTML = `
                     <div class="card" style="text-align: center; padding: 50px;">
                         <h3>No Completed Exams Yet</h3>
-                        <p style="color: var(--gray-text); margin: 10px 0 20px;">Take your first timed mock exam to start building your competency profile.</p>
-                        <a href="subjects.html" class="btn-solid-pill">Browse Mock Exams</a>
+                        <p style="color: var(--gray-text); margin: 10px 0 20px;">Take a mock or practice exam to start building your history.</p>
                     </div>
                 `;
                 return;
@@ -174,6 +173,7 @@
                     <div id="details-${index}" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
                         <h4 style="font-style: normal; font-size: 0.95rem; margin-bottom: 15px; color: var(--navy);">Competency & Topic Breakdown</h4>
                         ${domainHtml}
+                        <a class="btn-outline-pill" href="print-report.html?type=card&id=${item.id}" style="margin-top:16px; display:inline-flex;">Print Performance Card / Save as PDF</a>
                     </div>
                 `;
                 container.appendChild(card);

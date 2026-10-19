@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Licensure Exam | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <script>enforceRoleGuard(['STUDENT']);</script>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box"><span>cpedle</span></a>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html" aria-current="page">MOCK EXAM</a>
+                <a class="link" href="exam-history.html">HISTORY</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+    <main class="section-padding container" style="max-width: 900px;">
+        <div class="card" style="padding: 36px;">
+            <span class="postcard-tag">For registered examinees</span>
+            <h1>Mock Licensure Exam</h1>
+            <p>This exam draws 100 questions from your registered discipline, <strong id="exam-discipline">your discipline</strong>, covering its five domains. You have 60 minutes. Your score and topic breakdown will be saved to your history.</p>
+            <p>Questions follow the approved Table of Specifications for both domain and cognitive level (Remember, Understand, Apply, Analyze). Whole-question rounding keeps the 100-item totals exact.</p>
+            <p>A fresh question set is generated each time you start. Starting a new set replaces any unfinished exam in this browser tab.</p>
+            <p>Stay on the exam tab while taking the test. In a real licensure exam, tab switching is strictly not allowed; this mock exam will warn you if you leave and return. The timer continues running.</p>
+            <button id="start-licensure-exam" class="btn-solid-pill coral-btn" type="button">Start 100-Question Exam →</button>
+            <p id="licensure-error" role="alert" style="color: var(--coral); margin-top: 16px;"></p>
+        </div>
+    </main>
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">☾</button>
+    <script>
+        CpedleDB.ready.then(() => {
+            document.getElementById('exam-discipline').textContent = CpedleDB.getCurrentUser().discipline || 'your discipline';
+        });
+        document.getElementById('start-licensure-exam').addEventListener('click', async event => {
+            const button = event.currentTarget;
+            const error = document.getElementById('licensure-error');
+            if (CpedleDB.getActiveExam() && !confirm('Starting a new exam will replace your unfinished exam in this tab. Continue?')) return;
+            button.disabled = true;
+            error.textContent = '';
+            try {
+                await CpedleDB.ready;
+                await CpedleDB.startLicensureExam();
+                window.location.href = 'exam.html';
+            } catch (problem) {
+                error.textContent = problem.message;
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -32,10 +32,9 @@
             <div class="nav__options" id="admin-nav-bar">
                 <a class="link" href="admin-dashboard.html" style="color: var(--teal); font-weight: 700;">OVERVIEW</a>
                 <a class="link" href="test-bank.html">TEST BANK</a>
-                <a class="link" href="admin-generator.html">GENERATOR</a>
-                <a class="link" href="admin-requests.html">REQUESTS</a>
                 <a class="link" href="admin-accounts.html">ACCOUNTS</a>
                 <a class="link" href="admin-question-approvals.html">QUESTION APPROVALS</a>
+                <a class="link" href="admin-reports.html">REPORTS</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -60,11 +59,10 @@
                 <div>
                     <span style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.8rem; font-weight: 700; color: var(--teal);">ADMINISTRATOR CONTROL CENTER</span>
                     <h1 class="serif-heading" style="font-size: 2.8rem; margin-top: 4px; line-height: 1.1;">System & Test Bank Health</h1>
-                    <p style="color: var(--gray-text); font-size: 1rem; margin-top: 6px;">Monitor test item reserves, examinee mock requests, and exam generation status.</p>
+                    <p style="color: var(--gray-text); font-size: 1rem; margin-top: 6px;">Monitor test bank inventory and recorded examinee results.</p>
                 </div>
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                     <a href="test-bank.html" class="btn-solid-pill">+ Add Test Item</a>
-                    <a href="admin-generator.html" class="btn-solid-pill coral-btn">Generate Exam</a>
                 </div>
             </div>
 
@@ -76,33 +74,17 @@
                     <a href="test-bank.html" style="font-size: 0.85rem; font-weight: 600; color: var(--teal);">Manage in Test Bank →</a>
                 </div>
                 <div class="step-card" style="padding: 28px;">
-                    <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: var(--gray-text);">PENDING EXAMINEE REQUESTS</span>
-                    <div style="font-size: 3.2rem; font-weight: 800; color: var(--coral); margin: 10px 0 4px; line-height: 1;" id="dash-req-count">0</div>
-                    <a href="admin-requests.html" style="font-size: 0.85rem; font-weight: 600; color: var(--coral);">Review in Request Queue →</a>
-                </div>
-                <div class="step-card" style="padding: 28px;">
                     <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: var(--gray-text);">COMPLETED SIMULATIONS</span>
                     <div style="font-size: 3.2rem; font-weight: 800; color: var(--navy); margin: 10px 0 4px; line-height: 1;" id="dash-sim-count">0</div>
                     <span style="font-size: 0.85rem; color: var(--gray-text);">Recorded across all examinees</span>
                 </div>
             </div>
 
-            <!-- SPLIT PANELS: REQUESTS & RECENT ITEMS -->
-            <div class="split-layout" style="gap: 30px;">
-                <!-- PENDING PROPOSALS -->
-                <div>
-                    <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 16px;">Pending Exam Proposals</h2>
-                    <div id="pending-proposals-list" style="display: flex; flex-direction: column; gap: 14px;">
-                        <div class="step-card" style="padding: 20px; color: var(--gray-text);">No pending proposals awaiting review.</div>
-                    </div>
-                </div>
-
-                <!-- RECENT TEST BANK ITEMS -->
-                <div>
-                    <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 16px;">Recent Test Bank Items</h2>
-                    <div id="recent-bank-list" style="display: flex; flex-direction: column; gap: 14px;">
-                        <div class="step-card" style="padding: 20px; color: var(--gray-text);">No questions loaded yet.</div>
-                    </div>
+            <!-- RECENT TEST BANK ITEMS -->
+            <div>
+                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 16px;">Recent Test Bank Items</h2>
+                <div id="recent-bank-list" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div class="step-card" style="padding: 20px; color: var(--gray-text);">No questions loaded yet.</div>
                 </div>
             </div>
         </div>
@@ -122,34 +104,11 @@
             await enforceRoleGuard(['ADMIN']);
             
             const bank = CpedleDB.getQuestions();
-            const requests = CpedleDB.getRequests();
             const history = historyCache || [];
 
             // Update Metric Counts
             document.getElementById('dash-bank-count').textContent = bank.length;
-            const pendingReqs = requests.filter(r => r.status === 'PENDING');
-            document.getElementById('dash-req-count').textContent = pendingReqs.length;
             document.getElementById('dash-sim-count').textContent = history.length;
-
-            // Render Pending Proposals
-            const propList = document.getElementById('pending-proposals-list');
-            if (pendingReqs.length > 0) {
-                propList.innerHTML = '';
-                pendingReqs.slice(0, 4).forEach(req => {
-                    const item = document.createElement('div');
-                    item.className = 'step-card';
-                    item.style.padding = '18px 24px';
-                    item.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <strong style="color: var(--navy); font-size:1rem;">${escapeHtml(req.title)}</strong>
-                            <span class="deficiency-tag tag-satisfactory">Pending</span>
-                        </div>
-                        <p style="font-size:0.85rem; color:var(--gray-text); margin-bottom:10px;">Domain: ${escapeHtml(req.domain)} • ${escapeHtml(req.difficulty)}</p>
-                        <a href="admin-requests.html" class="btn-outline-pill" style="padding:4px 14px; font-size:0.8rem;">Review Request</a>
-                    `;
-                    propList.appendChild(item);
-                });
-            }
 
             // Render Recent Questions
             const bankList = document.getElementById('recent-bank-list');

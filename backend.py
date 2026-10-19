@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import re
 import secrets
@@ -57,6 +58,16 @@ DOMAINS = {domain for domains in DISCIPLINES.values() for domain in domains}
 COGNITIVE = {"Remember", "Understand", "Apply", "Analyze"}
 DIFFICULTIES = {"Easy", "Medium", "Hard"}
 ROLES = {"STUDENT", "EXAMINER", "ADMIN"}
+TOS_BLUEPRINT = {
+    "Network Engineer": ([15, 20, 25, 25, 15], [15, 20, 35, 30]),
+    "Systems Operations Engineer": ([15, 25, 25, 20, 15], [15, 25, 35, 25]),
+    "Computer Systems Architect": ([20, 25, 25, 15, 15], [15, 25, 30, 30]),
+    "Software Developer": ([15, 20, 20, 25, 20], [15, 25, 35, 25]),
+    "Algorithm Engineer": ([20, 15, 20, 20, 25], [15, 20, 35, 30]),
+    "Digital Design Engineer": ([15, 25, 25, 20, 15], [20, 20, 35, 25]),
+}
+COGNITIVE_ORDER = ["Remember", "Understand", "Apply", "Analyze"]
+DIFFICULTY_ORDER = ["Easy", "Medium", "Hard"]
 
 
 @contextmanager
@@ -145,6 +156,12 @@ def initialize() -> None:
                 role TEXT NOT NULL CHECK(role IN ('STUDENT','EXAMINER','ADMIN')),
                 name TEXT NOT NULL DEFAULT '',
                 discipline TEXT NOT NULL DEFAULT '',
+                professional_title TEXT NOT NULL DEFAULT '',
+                license_number TEXT NOT NULL DEFAULT '',
+                examiner_status TEXT NOT NULL DEFAULT 'approved'
+                    CHECK(examiner_status IN ('pending','approved','rejected')),
+                examiner_reviewed_at TEXT,
+                examiner_reviewed_by INTEGER REFERENCES users(id),
                 invalid_attempts INTEGER NOT NULL DEFAULT 0,
                 is_locked INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -197,7 +214,16 @@ def initialize() -> None:
                 total_items INTEGER NOT NULL,
                 correct_items INTEGER NOT NULL,
                 domains_json TEXT NOT NULL,
+                report_json TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS licensure_attempts (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                question_ids_json TEXT NOT NULL,
+                planned_json TEXT,
+                started_at INTEGER NOT NULL,
+                submitted_at INTEGER
             );
             CREATE TABLE IF NOT EXISTS requests (
                 id INTEGER PRIMARY KEY,
@@ -211,6 +237,30 @@ def initialize() -> None:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        # Existing accounts predate examiner applications and remain approved.
+        user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+        if "professional_title" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN professional_title TEXT NOT NULL DEFAULT ''")
+            if "license_number" in user_columns:
+                connection.execute("UPDATE users SET professional_title=discipline, discipline='' "
+                                   "WHERE role='EXAMINER' AND license_number<>''")
+        if "license_number" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN license_number TEXT NOT NULL DEFAULT ''")
+        if "examiner_status" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN examiner_status TEXT NOT NULL DEFAULT 'approved'")
+        if "examiner_reviewed_at" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN examiner_reviewed_at TEXT")
+        if "examiner_reviewed_by" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN examiner_reviewed_by INTEGER")
+        connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS unique_examiner_license "
+                           "ON users(license_number COLLATE NOCASE) WHERE license_number <> ''")
+        # Existing local databases predate printable TOS reports.
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(exam_history)")}
+        if "report_json" not in columns:
+            connection.execute("ALTER TABLE exam_history ADD COLUMN report_json TEXT")
+        attempt_columns = {row["name"] for row in connection.execute("PRAGMA table_info(licensure_attempts)")}
+        if "planned_json" not in attempt_columns:
+            connection.execute("ALTER TABLE licensure_attempts ADD COLUMN planned_json TEXT")
         # The bank is deliberately small until the group supplies its real questions.
         if not connection.execute("SELECT 1 FROM questions LIMIT 1").fetchone():
             import json
@@ -296,6 +346,7 @@ def public_user(row: sqlite3.Row) -> dict:
     return {
         "id": row["id"], "username": row["username"], "email": row["email"],
         "name": row["name"], "role": row["role"], "discipline": row["discipline"],
+        "professionalTitle": row["professional_title"],
     }
 
 
@@ -309,6 +360,7 @@ def current_session(request: Request) -> tuple[dict, str] | None:
             SELECT u.*, s.csrf_token FROM sessions s
             JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_locked = 0
+              AND (u.role != 'EXAMINER' OR u.examiner_status = 'approved')
         """, (token_hash, int(time.time()))).fetchone()
     return (public_user(row), row["csrf_token"]) if row else None
 
@@ -360,6 +412,12 @@ class RegisterIn(BaseModel):
     confirm_password: str
 
 
+class ExaminerRegisterIn(RegisterIn):
+    name: str = Field(min_length=2, max_length=100)
+    title: str = Field(min_length=2, max_length=100)
+    license_number: str = Field(min_length=3, max_length=50)
+
+
 class LoginIn(BaseModel):
     identifier: str
     password: str
@@ -400,18 +458,6 @@ class QuestionIn(BaseModel):
     explanation: str = ""
 
 
-class RequestIn(BaseModel):
-    title: str = Field(min_length=3, max_length=160)
-    domain: str
-    difficulty: str
-    notes: str = Field(default="", max_length=2000)
-
-
-class RequestStatusIn(BaseModel):
-    status: str
-    admin_comment: str = Field(default="", max_length=1000)
-
-
 class AnswerIn(BaseModel):
     id: str
     userAns: int | str | None = None
@@ -420,6 +466,11 @@ class AnswerIn(BaseModel):
 class ExamSubmission(BaseModel):
     title: str = Field(max_length=160)
     answers: list[AnswerIn]
+    mode: str | None = None
+    scope: str | None = None
+    difficulty_weights: list[int] | None = None
+    selected_domains: list[str] | None = None
+    attempt_id: str | None = None
 
 
 router = APIRouter(prefix="/api")
@@ -443,33 +494,30 @@ def bootstrap(request: Request) -> dict:
                 q.pop("ans", None)
                 q.pop("explanation", None)
         questions.extend(imported_questions(bool(user and user["role"] in {"ADMIN", "EXAMINER"})))
-        requests = []
+        if user and user["role"] == "STUDENT":
+            allowed_domains = DISCIPLINES.get(user["discipline"], [])
+            questions = [question for question in questions if question["domain"] in allowed_domains]
         history = []
         if user and user["role"] in {"STUDENT", "ADMIN"}:
-            where = "" if user["role"] == "ADMIN" else "WHERE r.user_id = ?"
             params = () if user["role"] == "ADMIN" else (user["id"],)
-            requests = [dict(row) for row in connection.execute(
-                f"""SELECT r.id, u.name AS examineeName, r.title, r.domain, r.difficulty,
-                       r.notes, r.status, r.admin_comment AS adminComment,
-                       r.created_at AS timestamp
-                    FROM requests r JOIN users u ON u.id=r.user_id {where}
-                    ORDER BY r.id DESC""", params
-            )]
             where_h = "" if user["role"] == "ADMIN" else "WHERE user_id = ?"
             history = [
                 {**dict(row), "domains": json.loads(row["domains_json"])}
                 for row in connection.execute(
                     f"""SELECT id,title,created_at AS date,score_pct AS scorePct,
                                total_items AS totalItems,correct_items AS correctItems,
-                               domains_json FROM exam_history {where_h} ORDER BY id DESC""",
+                               domains_json,report_json FROM exam_history {where_h} ORDER BY id DESC""",
                     params,
                 )
             ]
             for item in history:
                 item.pop("domains_json", None)
+                report_json = item.pop("report_json")
+                snapshot = json.loads(report_json) if report_json else None
+                item["mode"] = snapshot.get("mode", "legacy") if snapshot else "legacy"
     return {
         "user": user, "csrf": session[1] if session else None,
-        "questions": questions, "requests": requests, "history": history,
+        "questions": questions, "history": history,
     }
 
 
@@ -499,6 +547,43 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
     _, csrf = set_session(response, cursor.lastrowid, request.url.scheme == "https")
     return {"user": {"id": cursor.lastrowid, "username": username, "email": email,
                      "role": "STUDENT", "name": "", "discipline": ""}, "csrf": csrf}
+
+
+@router.post("/auth/register-examiner")
+def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
+    """Create a pending examiner application without issuing a login session."""
+    require_same_origin(request)
+    if payload.password != payload.confirm_password:
+        raise HTTPException(422, "Passwords do not match.")
+    username = validate_username(payload.username)
+    email = validate_email(payload.email)
+    validate_password(payload.password)
+    name = payload.name.strip()
+    if len(name) < 2:
+        raise HTTPException(422, "Enter your full name.")
+    title = payload.title.strip()
+    if len(title) < 2 or len(title) > 100 or any(ord(char) < 32 for char in title):
+        raise HTTPException(422, "Enter a valid professional title (2–100 characters).")
+    license_number = payload.license_number.strip()
+    if len(license_number) < 3 or len(license_number) > 50 or any(ord(char) < 32 for char in license_number):
+        raise HTTPException(422, "Enter a valid license number (3–50 characters).")
+    try:
+        with db() as connection:
+            if connection.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
+                raise HTTPException(409, "Username is already registered.")
+            if connection.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+                raise HTTPException(409, "Email is already registered.")
+            if connection.execute("SELECT 1 FROM users WHERE license_number=? COLLATE NOCASE",
+                                  (license_number,)).fetchone():
+                raise HTTPException(409, "License number is already registered.")
+            connection.execute(
+                "INSERT INTO users(username,email,password_hash,role,name,professional_title,license_number,examiner_status) "
+                "VALUES(?,?,?,'EXAMINER',?,?,?,'pending')",
+                (username, email, hash_password(payload.password), name, title, license_number),
+            )
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "Username, email, or license number is already registered.") from None
+    return {"message": "Examiner registration submitted for administrator approval."}
 
 
 @router.post("/auth/login")
@@ -531,6 +616,11 @@ def login(payload: LoginIn, request: Request, response: Response) -> dict:
                 raise HTTPException(423, "Account locked after 3 invalid attempts.")
             raise HTTPException(401, f"Invalid username/email or password. {MAX_ATTEMPTS-attempts} attempt(s) remaining.")
         connection.execute("UPDATE users SET invalid_attempts=0 WHERE id=?", (row["id"],))
+    if row["role"] == "EXAMINER" and row["examiner_status"] != "approved":
+        message = ("Your examiner registration is awaiting administrator approval." if
+                   row["examiner_status"] == "pending" else
+                   "Your examiner registration was not approved. Contact an administrator.")
+        raise HTTPException(403, message)
     _, csrf = set_session(response, row["id"], request.url.scheme == "https")
     return {"user": public_user(row), "csrf": csrf}
 
@@ -571,12 +661,12 @@ def request_reset(payload: ResetIn, request: Request) -> dict:
 
 @router.put("/profile")
 def save_profile(payload: ProfileIn, user: dict = Depends(require_user)) -> dict:
-    if user["role"] != "ADMIN" and payload.discipline not in DISCIPLINES:
+    if user["role"] == "STUDENT" and payload.discipline not in DISCIPLINES:
         raise HTTPException(422, "Select a listed Computer Engineering discipline.")
     name = payload.name.strip()
     if len(name) < 2:
         raise HTTPException(422, "Enter your name.")
-    discipline = "" if user["role"] == "ADMIN" else payload.discipline
+    discipline = payload.discipline if user["role"] == "STUDENT" else ""
     with db() as connection:
         connection.execute(
             "UPDATE users SET name=?, discipline=? WHERE id=?",
@@ -605,8 +695,33 @@ def change_own_email(payload: EmailChangeIn, user: dict = Depends(require_user))
 def admin_users(admin: dict = Depends(role_required("ADMIN"))) -> list[dict]:
     with db() as connection:
         return [dict(row) for row in connection.execute(
-            "SELECT id,username,email,name,discipline,role,invalid_attempts,is_locked FROM users ORDER BY id"
+            "SELECT id,username,email,name,discipline,role,examiner_status,invalid_attempts,is_locked "
+            "FROM users ORDER BY id"
         )]
+
+
+@router.get("/admin/examiner-applications")
+def examiner_applications(admin: dict = Depends(role_required("ADMIN"))) -> list[dict]:
+    with db() as connection:
+        return [dict(row) for row in connection.execute(
+            "SELECT id,username,email,name,professional_title AS title,license_number,created_at "
+            "FROM users WHERE role='EXAMINER' AND examiner_status='pending' ORDER BY id DESC"
+        )]
+
+
+@router.post("/admin/examiner-applications/{user_id}/decision")
+def decide_examiner_application(user_id: int, payload: DecisionIn,
+                                admin: dict = Depends(role_required("ADMIN"))) -> dict:
+    with db() as connection:
+        cursor = connection.execute(
+            "UPDATE users SET examiner_status=?,examiner_reviewed_at=CURRENT_TIMESTAMP,examiner_reviewed_by=? "
+            "WHERE id=? AND role='EXAMINER' AND examiner_status='pending'",
+            ("approved" if payload.approve else "rejected", admin["id"], user_id),
+        )
+        if not cursor.rowcount:
+            raise HTTPException(404, "Pending examiner registration not found.")
+        connection.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+    return {"ok": True}
 
 
 @router.patch("/admin/users/{user_id}/role")
@@ -616,9 +731,11 @@ def change_role(user_id: int, payload: RoleIn, admin: dict = Depends(role_requir
     if user_id == admin["id"]:
         raise HTTPException(400, "You cannot change your own role.")
     with db() as connection:
-        target = connection.execute("SELECT id FROM users WHERE id=?", (user_id,)).fetchone()
+        target = connection.execute("SELECT id,examiner_status FROM users WHERE id=?", (user_id,)).fetchone()
         if not target:
             raise HTTPException(404, "Account not found.")
+        if target["examiner_status"] != "approved":
+            raise HTTPException(409, "Review the examiner registration before changing its role.")
         connection.execute("UPDATE users SET role=? WHERE id=?", (payload.role, user_id))
         connection.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
     return {"ok": True}
@@ -825,34 +942,6 @@ def import_questions(items: list[QuestionIn], user: dict = Depends(role_required
             "pending": len(items) if user["role"] == "EXAMINER" else 0}
 
 
-@router.post("/requests")
-def submit_request(payload: RequestIn, student: dict = Depends(role_required("STUDENT"))) -> dict:
-    if payload.domain not in DOMAINS or payload.difficulty not in DIFFICULTIES:
-        raise HTTPException(422, "Select a valid domain and difficulty.")
-    with db() as connection:
-        cursor = connection.execute(
-            "INSERT INTO requests(user_id,title,domain,difficulty,notes) VALUES(?,?,?,?,?)",
-            (student["id"], payload.title.strip(), payload.domain,
-             payload.difficulty, payload.notes.strip()),
-        )
-    return {"id": cursor.lastrowid}
-
-
-@router.patch("/admin/requests/{request_id}")
-def review_request(request_id: int, payload: RequestStatusIn,
-                   admin: dict = Depends(role_required("ADMIN"))) -> dict:
-    if payload.status not in {"Pending", "Approved", "Rejected"}:
-        raise HTTPException(422, "Invalid request status.")
-    with db() as connection:
-        cursor = connection.execute(
-            "UPDATE requests SET status=?,admin_comment=? WHERE id=?",
-            (payload.status, payload.admin_comment.strip(), request_id),
-        )
-    if not cursor.rowcount:
-        raise HTTPException(404, "Request not found.")
-    return {"ok": True}
-
-
 def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) -> dict:
     if not payload.answers or len(payload.answers) > 500:
         raise HTTPException(422, "Submit 1–500 answers.")
@@ -864,7 +953,7 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     lookup = {}
     if local_ids:
         rows = connection.execute(
-            f"SELECT id,ans,domain FROM questions WHERE id IN ({','.join('?' for _ in local_ids)})",
+            f"SELECT id,ans,domain,cognitive,difficulty FROM questions WHERE id IN ({','.join('?' for _ in local_ids)})",
             local_ids,
         ).fetchall()
         lookup.update({row["id"]: {**dict(row), "type": "local"} for row in rows})
@@ -875,7 +964,8 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         with question_bank() as bank:
             if bank is not None:
                 rows = bank.execute(
-                    f"""SELECT q.id,q.question_type,q.answer_letter,d.name AS domain
+                    f"""SELECT q.id,q.question_type,q.answer_letter,q.cognitive_level AS cognitive,
+                               q.difficulty,d.name AS domain
                         FROM questions q JOIN domains d ON d.id=q.domain_id
                         WHERE q.id IN ({','.join('?' for _ in numbers)})""",
                     numbers,
@@ -889,7 +979,8 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
                         "SELECT letter FROM choices WHERE question_id=? ORDER BY letter", (number,)
                     )]
                     lookup[f"QB-{number}"] = {
-                        "domain": row["domain"], "type": row["question_type"],
+                        "domain": row["domain"], "cognitive": row["cognitive"],
+                        "difficulty": row["difficulty"], "type": row["question_type"],
                         "answer_index": letters.index(row["answer_letter"])
                         if row["answer_letter"] in letters else None,
                         "accepted": {normalize_answer(item["answer_norm"]) for item in answer_rows},
@@ -897,6 +988,7 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     if len(lookup) != len(ids):
         raise HTTPException(422, "One or more questions no longer exist.")
     stats: dict[str, dict[str, int]] = {}
+    actual = {"domains": {}, "cognitive": {}, "difficulty": {}, "joint": {}}
     correct = 0
     for answer in payload.answers:
         row = lookup[answer.id]
@@ -915,6 +1007,12 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         else:
             match = False
         correct += int(match)
+        for category, label in (("domains", row["domain"]),
+                                ("cognitive", row["cognitive"]),
+                                ("difficulty", row["difficulty"])):
+            actual[category][label] = actual[category].get(label, 0) + 1
+        joint_label = f"{row['domain']} — {row['cognitive']}"
+        actual["joint"][joint_label] = actual["joint"].get(joint_label, 0) + 1
         stat = stats.setdefault(row["domain"], {"total": 0, "correct": 0})
         stat["total"] += 1
         stat["correct"] += int(match)
@@ -929,6 +1027,7 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     return {
         "title": payload.title or "Practice Drill", "scorePct": pct,
         "totalItems": len(ids), "correctItems": correct, "domains": domains,
+        "distribution": actual,
     }
 
 
@@ -937,29 +1036,278 @@ def normalize_answer(value: str) -> str:
     return " ".join(value.lower().split())
 
 
+def allocate_report_counts(labels: list[str], weights: list[int], count: int) -> dict[str, int]:
+    """Match the generator's largest-remainder allocation, including tie order."""
+    total = sum(weights)
+    rows = [(index, count * weight // total, count * weight % total)
+            for index, weight in enumerate(weights)]
+    result = {label: amount for label, (_, amount, _) in zip(labels, rows)}
+    remainder = count - sum(result.values())
+    for index, _, _ in sorted(rows, key=lambda row: (-row[2], row[0]))[:remainder]:
+        result[labels[index]] += 1
+    return result
+
+
+def build_exam_report(payload: ExamSubmission, student: dict, result: dict) -> dict:
+    actual = result["distribution"]
+    report = {"mode": "licensure" if payload.mode == "licensure" else
+              ("practice" if payload.mode == "student_practice" else
+              ("mock" if payload.scope else
+               ("remediation" if payload.mode == "remediation" else "unclassified"))),
+              "scope": payload.scope, "planned": None, "actual": actual,
+              "status": "unavailable", "studentNameAtExam": student.get("name", ""),
+              "disciplineAtExam": student.get("discipline", "")}
+    if payload.scope is None and payload.difficulty_weights is None:
+        return report
+    discipline = student["discipline"]
+    if payload.scope not in [discipline, *DISCIPLINES[discipline]]:
+        raise HTTPException(422, "The report scope must be within your discipline.")
+    weights = payload.difficulty_weights
+    if (weights is None or len(weights) != 3 or
+            any(weight < 0 or weight > 100 for weight in weights) or sum(weights) != 100):
+        raise HTTPException(422, "Report difficulty percentages must total 100%.")
+    if not 11 <= result["totalItems"] <= 200:
+        raise HTTPException(422, "TOS mock reports require 11–200 questions.")
+    domains = DISCIPLINES[discipline]
+    blueprint_domains, blueprint_cognitive = TOS_BLUEPRINT[discipline]
+    planned = {
+        "domains": allocate_report_counts(domains, blueprint_domains, result["totalItems"])
+        if payload.scope == discipline else {payload.scope: result["totalItems"]},
+        "cognitive": allocate_report_counts(COGNITIVE_ORDER, blueprint_cognitive,
+                                            result["totalItems"]),
+        "difficulty": allocate_report_counts(DIFFICULTY_ORDER, weights,
+                                             result["totalItems"]),
+    }
+    report["planned"] = planned
+    report["difficultyWeights"] = weights
+    report["status"] = "met" if all(
+        all(actual[axis].get(label, 0) == target for label, target in expected.items()) and
+        all(label in expected for label in actual[axis])
+        for axis, expected in planned.items()
+    ) else "not_met"
+    return report
+
+
 @router.post("/exams/practice-score")
 def practice_score(payload: ExamSubmission, request: Request) -> dict:
     require_same_origin(request)
     session = current_session(request)
     if session is None and len(payload.answers) > 10:
         raise HTTPException(422, "Guest practice drills are limited to 10 questions.")
-    if session and session[0]["role"] not in {"STUDENT"}:
-        raise HTTPException(403, "This role cannot take practice drills.")
+    if session:
+        raise HTTPException(403, "Practice drills are for guests. Students take mock exams within their discipline.")
     with db() as connection:
         return score_exam_payload(connection, payload)
 
 
+def licensure_cell_quotas(discipline: str, available: dict[tuple[str, str], int]) -> dict[tuple[str, str], int]:
+    """Round domain × cognitive products while preserving both 100-item margins."""
+    domains = DISCIPLINES[discipline]
+    domain_weights, cognitive_weights = TOS_BLUEPRINT[discipline]
+    quotas = {}
+    row_left = dict(zip(domains, domain_weights))
+    column_left = dict(zip(COGNITIVE_ORDER, cognitive_weights))
+    for domain, domain_weight in zip(domains, domain_weights):
+        for level, cognitive_weight in zip(COGNITIVE_ORDER, cognitive_weights):
+            base = domain_weight * cognitive_weight // 100
+            if available.get((domain, level), 0) < base:
+                raise HTTPException(503, f"The bank lacks {domain} / {level} questions for this TOS.")
+            quotas[(domain, level)] = base
+            row_left[domain] -= base
+            column_left[level] -= base
+
+    # Each fractional cell may receive one extra question. An augmenting-path
+    # flow preserves every domain and cognitive total despite linked rounding.
+    sink = 1 + len(domains) + len(COGNITIVE_ORDER)
+    graph: list[list[dict]] = [[] for _ in range(sink + 1)]
+    def edge(source: int, target: int, capacity: int) -> dict:
+        forward = {"to": target, "remaining": capacity, "reverse": len(graph[target])}
+        backward = {"to": source, "remaining": 0, "reverse": len(graph[source])}
+        graph[source].append(forward)
+        graph[target].append(backward)
+        return forward
+
+    for index, domain in enumerate(domains):
+        edge(0, 1 + index, row_left[domain])
+    cell_edges = {}
+    for domain_index, domain in enumerate(domains):
+        ranked_levels = sorted(enumerate(COGNITIVE_ORDER),
+                               key=lambda item: -(domain_weights[domain_index] *
+                                                  cognitive_weights[item[0]] % 100))
+        for level_index, level in ranked_levels:
+            product = domain_weights[domain_index] * cognitive_weights[level_index]
+            if product % 100 and available.get((domain, level), 0) > quotas[(domain, level)]:
+                cell_edges[(domain, level)] = edge(1 + domain_index,
+                    1 + len(domains) + level_index, 1)
+    for index, level in enumerate(COGNITIVE_ORDER):
+        edge(1 + len(domains) + index, sink, column_left[level])
+
+    required = sum(row_left.values())
+    sent = 0
+    while sent < required:
+        parent = {0: None}
+        queue = [0]
+        for node in queue:
+            if sink in parent:
+                break
+            for index, branch in enumerate(graph[node]):
+                if branch["remaining"] > 0 and branch["to"] not in parent:
+                    parent[branch["to"]] = (node, index)
+                    queue.append(branch["to"])
+        if sink not in parent:
+            raise HTTPException(503, "The bank cannot meet the combined domain and cognitive TOS quotas.")
+        amount = 1
+        at = sink
+        while at:
+            node, index = parent[at]
+            branch = graph[node][index]
+            branch["remaining"] -= amount
+            graph[at][branch["reverse"]]["remaining"] += amount
+            at = node
+        sent += amount
+    for cell, branch in cell_edges.items():
+        quotas[cell] += 1 - branch["remaining"]
+    return quotas
+
+
+@router.post("/exams/licensure/start")
+def start_licensure_exam(student: dict = Depends(role_required("STUDENT"))) -> dict:
+    """Issue a fresh 100-item set matching joint domain/cognitive TOS quotas."""
+    discipline = student.get("discipline")
+    if discipline not in DISCIPLINES:
+        raise HTTPException(403, "Complete your profile before taking an exam.")
+    domains = DISCIPLINES[discipline]
+    by_cell: dict[tuple[str, str], list[dict]] = {
+        (domain, level): [] for domain in domains for level in COGNITIVE_ORDER}
+    for question in imported_questions():
+        cell = (question["domain"], question["cognitive"])
+        if cell in by_cell:
+            by_cell[cell].append(question)
+    with db() as connection:
+        for row in connection.execute(
+            "SELECT id,q,opts_json,domain,cognitive,difficulty FROM questions"
+        ):
+            cell = (row["domain"], row["cognitive"])
+            if cell in by_cell:
+                by_cell[cell].append({"id": row["id"], "q": row["q"],
+                    "opts": json.loads(row["opts_json"]), "domain": row["domain"],
+                    "cognitive": row["cognitive"], "difficulty": row["difficulty"],
+                    "questionType": "multiple_choice", "source": "local"})
+    randomizer = secrets.SystemRandom()
+    quotas = licensure_cell_quotas(discipline, {cell: len(items) for cell, items in by_cell.items()})
+    selected = [question for cell, quota in quotas.items()
+                for question in randomizer.sample(by_cell[cell], quota)]
+    randomizer.shuffle(selected)
+    planned = {"domains": dict(zip(domains, TOS_BLUEPRINT[discipline][0])),
+               "cognitive": dict(zip(COGNITIVE_ORDER, TOS_BLUEPRINT[discipline][1])),
+               "joint": {f"{domain} — {level}": quota for (domain, level), quota in quotas.items()}}
+    attempt_id = secrets.token_urlsafe(24)
+    started_at = int(time.time())
+    with db() as connection:
+        connection.execute(
+            "INSERT INTO licensure_attempts(id,user_id,question_ids_json,planned_json,started_at) VALUES(?,?,?,?,?)",
+            (attempt_id, student["id"], json.dumps([item["id"] for item in selected]),
+             json.dumps(planned), started_at),
+        )
+    return {"attemptId": attempt_id, "startedAt": started_at, "timeSeconds": 3600,
+            "title": "Mock Licensure Exam", "questions": selected}
+
+
 @router.post("/exams/submit")
 def submit_exam(payload: ExamSubmission, student: dict = Depends(role_required("STUDENT"))) -> dict:
-    import json
+    allowed_domains = DISCIPLINES.get(student.get("discipline", ""))
+    if not allowed_domains:
+        raise HTTPException(403, "Choose your discipline in your profile before submitting a mock exam.")
     with db() as connection:
+        if payload.mode == "licensure":
+            attempt = connection.execute(
+                "SELECT * FROM licensure_attempts WHERE id=? AND user_id=? AND submitted_at IS NULL",
+                (payload.attempt_id, student["id"]),
+            ).fetchone()
+            if not attempt or len(payload.answers) != 100 or payload.scope is not None or payload.difficulty_weights is not None:
+                raise HTTPException(422, "This mock licensure attempt is unavailable or invalid.")
+            issued_ids = json.loads(attempt["question_ids_json"])
+            if {answer.id for answer in payload.answers} != set(issued_ids):
+                raise HTTPException(422, "Submit the questions issued for this mock licensure attempt.")
+            if time.time() < attempt["started_at"]:
+                raise HTTPException(422, "Invalid mock licensure attempt time.")
         result = score_exam_payload(connection, payload)
+        if payload.mode == "licensure":
+            result["title"] = "Mock Licensure Exam"
+        if any(domain["name"] not in allowed_domains for domain in result["domains"]):
+            raise HTTPException(403, "Mock exam questions must belong to your selected discipline.")
+        if payload.mode == "student_practice":
+            selected = payload.selected_domains or []
+            if (not selected or len(selected) > 5 or len(selected) != len(set(selected)) or
+                    any(domain not in allowed_domains for domain in selected) or
+                    len(payload.answers) > 200 or
+                    {domain["name"] for domain in result["domains"]} != set(selected) or
+                    payload.scope is not None or payload.difficulty_weights is not None):
+                raise HTTPException(422, "Practice exams must contain the selected domains within your discipline.")
+            result["title"] = (f"{selected[0]} Practice Exam" if len(selected) == 1 else
+                               f"{student['discipline']} Practice Exam ({len(selected)} domains)")
+        report = build_exam_report(payload, student, result)
+        if payload.mode == "licensure" and attempt["planned_json"]:
+            planned = json.loads(attempt["planned_json"])
+            report["planned"] = planned
+            report["status"] = "met" if all(
+                result["distribution"][axis] == targets for axis, targets in planned.items()
+            ) else "not_met"
         cursor = connection.execute(
-            "INSERT INTO exam_history(user_id,title,score_pct,total_items,correct_items,domains_json) VALUES(?,?,?,?,?,?)",
+            """INSERT INTO exam_history(user_id,title,score_pct,total_items,correct_items,
+                                        domains_json,report_json) VALUES(?,?,?,?,?,?,?)""",
             (student["id"], result["title"], result["scorePct"], result["totalItems"],
-             result["correctItems"], json.dumps(result["domains"])),
+             result["correctItems"], json.dumps(result["domains"]), json.dumps(report)),
         )
+        if payload.mode == "licensure":
+            connection.execute("UPDATE licensure_attempts SET submitted_at=? WHERE id=?",
+                               (int(time.time()), payload.attempt_id))
     return {"id": cursor.lastrowid, **result}
+
+
+@router.get("/reports/exams/{exam_id}")
+def exam_report(exam_id: int, user: dict = Depends(role_required("STUDENT", "ADMIN"))) -> dict:
+    with db() as connection:
+        row = connection.execute(
+            """SELECT h.id,h.user_id,h.title,h.created_at AS date,h.score_pct AS scorePct,
+                      h.total_items AS totalItems,h.correct_items AS correctItems,
+                      h.domains_json,h.report_json,u.name AS studentName,
+                      u.username,u.discipline
+               FROM exam_history h JOIN users u ON u.id=h.user_id WHERE h.id=?""", (exam_id,)
+        ).fetchone()
+    if row is None or (user["role"] != "ADMIN" and row["user_id"] != user["id"]):
+        raise HTTPException(404, "Exam report not found.")
+    item = dict(row)
+    item["domains"] = json.loads(item.pop("domains_json"))
+    report_json = item.pop("report_json")
+    snapshot = json.loads(report_json) if report_json else None
+    if snapshot:
+        item["studentName"] = snapshot.get("studentNameAtExam") or item["studentName"]
+        item["discipline"] = snapshot.get("disciplineAtExam") or item["discipline"]
+    item["report"] = snapshot if user["role"] == "ADMIN" else None
+    return item
+
+
+@router.get("/admin/reports/roster")
+def cohort_roster(admin: dict = Depends(role_required("ADMIN"))) -> list[dict]:
+    with db() as connection:
+        rows = connection.execute(
+            """SELECT h.id,h.title,h.created_at AS date,h.score_pct AS scorePct,
+                      h.total_items AS totalItems,h.correct_items AS correctItems,
+                      h.report_json,u.name AS studentName,u.username,u.discipline
+               FROM exam_history h JOIN users u ON u.id=h.user_id
+               ORDER BY h.created_at DESC,h.id DESC"""
+        ).fetchall()
+    roster = []
+    for row in rows:
+        item = {key: value for key, value in dict(row).items() if key != "report_json"}
+        snapshot = json.loads(row["report_json"]) if row["report_json"] else None
+        item["mode"] = snapshot.get("mode", "unclassified") if snapshot else "legacy"
+        if snapshot:
+            item["studentName"] = snapshot.get("studentNameAtExam") or item["studentName"]
+            item["discipline"] = snapshot.get("disciplineAtExam") or item["discipline"]
+        roster.append(item)
+    return roster
 
 
 def create_initial_admin(username: str, email: str, password: str) -> None:

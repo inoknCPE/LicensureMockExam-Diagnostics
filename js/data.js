@@ -125,6 +125,32 @@ function buildTosPlan({ count, domain, easyPct, medPct, hardPct }) {
     };
 }
 
+function studentExamScopes(user = sessionUser) {
+    return user.role === 'STUDENT' && DISCIPLINES[user.discipline]
+        ? [user.discipline, ...DISCIPLINES[user.discipline]] : [];
+}
+
+function showStudentMockLinks() {
+    document.querySelectorAll('[data-student-only]').forEach(item => {
+        const discipline = item.dataset.mockDiscipline;
+        item.hidden = sessionUser.role !== 'STUDENT' ||
+            Boolean(discipline && discipline !== sessionUser.discipline);
+    });
+    document.querySelectorAll('[data-guest-only]').forEach(item => {
+        item.hidden = sessionUser.role !== 'GUEST';
+    });
+}
+
+function requireStudentExamScope(domain) {
+    if (sessionUser.role !== 'STUDENT') return;
+    if (!studentExamScopes().length) {
+        throw new Error('Complete your profile and choose a discipline before creating a mock exam.');
+    }
+    if (!studentExamScopes().includes(domain)) {
+        throw new Error(`You can only create exams in your ${sessionUser.discipline} discipline.`);
+    }
+}
+
 // Standard bipartite max flow allocates integer quotas without sampling bias.
 // It returns null when the available edges cannot satisfy both margins.
 function allocateTosFlow(leftDemand, rightDemand, capacity, randomize = false) {
@@ -259,7 +285,6 @@ document.addEventListener("DOMContentLoaded", populateTaxonomySelects);
 let sessionUser = { role: 'GUEST', name: 'Guest Reviewee' };
 let csrfToken = null;
 let bankCache = [];
-let requestCache = [];
 let historyCache = [];
 
 async function apiCall(path, options = {}) {
@@ -275,7 +300,10 @@ async function apiCall(path, options = {}) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
         const detail = body.detail;
-        throw new Error(typeof detail === 'string' ? detail : 'Request failed. Please try again.');
+        const message = typeof detail === 'string' ? detail : Array.isArray(detail)
+            ? detail.map(issue => `${issue.loc?.at(-1) || 'Input'}: ${issue.msg}`).join('; ')
+            : 'Request failed. Please try again.';
+        throw new Error(message);
     }
     return body;
 }
@@ -292,17 +320,19 @@ function renderSessionNavigation(navBar, activePage = '') {
     const menus = {
         ADMIN: [
             ['admin-dashboard.html', 'OVERVIEW'], ['test-bank.html', 'TEST BANK'],
-            ['admin-generator.html', 'GENERATOR'], ['admin-requests.html', 'REQUESTS'],
             ['admin-accounts.html', 'ACCOUNTS'],
-            ['admin-question-approvals.html', 'QUESTION APPROVALS']
+            ['admin-question-approvals.html', 'QUESTION APPROVALS'],
+            ['admin-reports.html', 'REPORTS']
         ],
         EXAMINER: [
             ['examiner-dashboard.html', 'DASHBOARD'], ['test-bank.html', 'TEST BANK'],
+            ['examiner-question-submissions.html', 'QUESTION SUBMISSIONS'],
             ['profile.html', 'PROFILE']
         ],
         STUDENT: [
-            ['examinee-dashboard.html', 'DASHBOARD'], ['subjects.html', 'MOCK EXAMS'],
-            ['generator.html', 'GENERATOR'], ['exam-history.html', 'HISTORY']
+            ['examinee-dashboard.html', 'DASHBOARD'], ['subjects.html', 'DISCIPLINES'],
+            ['generator.html', 'PRACTICE EXAM'], ['mock-exam.html', 'MOCK EXAM'],
+            ['exam-history.html', 'HISTORY']
         ]
     };
     const links = menus[sessionUser.role] || [];
@@ -338,12 +368,25 @@ function confirmLogout() {
     });
 }
 
+// Imported "both" items support either response type, but an examinee sees
+// only one format for a given attempt. Store that choice with the exam.
+function chooseQuestionFormat(question) {
+    if (question.questionType !== 'both') return question;
+    const answeredAsChoice = Number.isInteger(question.userAns);
+    const answeredAsText = typeof question.userAns === 'string' && question.userAns.length > 0;
+    return {
+        ...question,
+        questionType: answeredAsText ? 'identification' :
+            (question.opts?.length && (answeredAsChoice || Math.random() < 0.5))
+            ? 'multiple_choice' : 'identification'
+    };
+}
+
 async function refreshBootstrap() {
     const state = await apiCall('/bootstrap');
     sessionUser = state.user || { role: 'GUEST', name: 'Guest Reviewee' };
     csrfToken = state.csrf || null;
     bankCache = state.questions || [];
-    requestCache = state.requests || [];
     historyCache = state.history || [];
     return state;
 }
@@ -374,6 +417,19 @@ const CpedleDB = {
             });
             await refreshBootstrap();
             return { success: true, user: result.user };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    },
+    async registerExaminer(username, email, password, confirmPassword, name, title, licenseNumber) {
+        try {
+            const result = await apiCall('/auth/register-examiner', {
+                method: 'POST',
+                body: JSON.stringify({ username, email, password,
+                    confirm_password: confirmPassword, name, title,
+                    license_number: licenseNumber })
+            });
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -412,9 +468,10 @@ const CpedleDB = {
     },
     getQuestions() { return bankCache; },
     async saveQuestion(qData) {
-        const exists = qData.id && bankCache.some(q => q.id === qData.id);
-        const result = await apiCall(exists ? '/questions/' + encodeURIComponent(qData.id) : '/questions', {
-            method: exists ? 'PUT' : 'POST', body: JSON.stringify(qData)
+        const question = { ...qData, id: qData.id?.trim() || null };
+        const exists = question.id && bankCache.some(q => q.id === question.id);
+        const result = await apiCall(exists ? '/questions/' + encodeURIComponent(question.id) : '/questions', {
+            method: exists ? 'PUT' : 'POST', body: JSON.stringify(question)
         });
         await refreshBootstrap();
         return result;
@@ -430,47 +487,68 @@ const CpedleDB = {
         await refreshBootstrap();
         return result;
     },
-    getRequests() { return requestCache; },
-    async submitRequest(req) {
-        const result = await apiCall('/requests', {
-            method: 'POST',
-            body: JSON.stringify({
-                title: req.title, domain: req.domain,
-                difficulty: req.difficulty, notes: req.notes || ''
-            })
-        });
-        await refreshBootstrap();
-        return result;
-    },
-    async updateRequestStatus(id, status, adminComment = '') {
-        await apiCall('/admin/requests/' + id, {
-            method: 'PATCH', body: JSON.stringify({ status, admin_comment: adminComment })
-        });
-        await refreshBootstrap();
-    },
-
     // Exam Engine & Generator
-    getTosPlan(options) { return buildTosPlan(options); },
-    generateExam({ count = 10, timeMinutes = 60, domain = 'All', easyPct = 30, medPct = 50, hardPct = 20, mode = 'mock', preview = false }) {
-        if (preview && sessionUser.role !== 'ADMIN') {
-            throw new Error('Only administrators can preview an exam set.');
-        }
-        if (!preview && (sessionUser.role === 'ADMIN' || sessionUser.role === 'EXAMINER')) {
+    async startLicensureExam() {
+        if (sessionUser.role !== 'STUDENT') throw new Error('Only examinees can take the mock licensure exam.');
+        const issued = await apiCall('/exams/licensure/start', { method: 'POST' });
+        const exam = {
+            id: 'LICENSURE-' + issued.attemptId,
+            attemptId: issued.attemptId,
+            mode: 'licensure',
+            title: issued.title,
+            totalItems: issued.questions.length,
+            timeSeconds: issued.timeSeconds,
+            startedAt: issued.startedAt,
+            questions: issued.questions.map(q => ({ ...chooseQuestionFormat(q), userAns: null, flagged: false }))
+        };
+        sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(exam));
+        return exam;
+    },
+    getTosPlan(options) {
+        requireStudentExamScope(options.domain);
+        return buildTosPlan(options);
+    },
+    generateExam({ count = 10, timeMinutes = 60, domain = 'All', domains = null, easyPct = 30, medPct = 50, hardPct = 20, mode = 'mock' }) {
+        if (sessionUser.role === 'ADMIN' || sessionUser.role === 'EXAMINER') {
             throw new Error('This role cannot take exams.');
         }
         if (sessionUser.role === 'GUEST') {
             if (mode !== 'practice') throw new Error('Guests can only take practice drills.');
             count = Math.min(count, 10);
         }
+        if (sessionUser.role === 'STUDENT' && mode === 'practice') {
+            throw new Error('Practice drills are for guests. Create a mock exam within your discipline.');
+        }
+        let selectedDomains = null;
+        if (mode === 'student_practice') {
+            if (sessionUser.role !== 'STUDENT') throw new Error('Sign in as an examinee to create a practice exam.');
+            if ([easyPct, medPct, hardPct].some(value => !Number.isInteger(value) || value < 0 || value > 100) ||
+                easyPct + medPct + hardPct !== 100) {
+                throw new Error('Difficulty percentages must total 100%.');
+            }
+            const allowed = DISCIPLINES[sessionUser.discipline] || [];
+            selectedDomains = Array.isArray(domains) ? [...new Set(domains)] : [];
+            if (!selectedDomains.length || selectedDomains.some(name => !allowed.includes(name))) {
+                throw new Error(`Choose one or more domains within your ${sessionUser.discipline} discipline.`);
+            }
+            if (!Number.isInteger(count) || count < selectedDomains.length || count > 200) {
+                throw new Error(`Choose ${selectedDomains.length}–200 questions so every selected domain is represented.`);
+            }
+            if (!Number.isInteger(timeMinutes) || timeMinutes < 5 || timeMinutes > 300) {
+                throw new Error('Choose a time limit from 5 to 300 minutes.');
+            }
+        } else {
+            requireStudentExamScope(domain);
+        }
         const bank = this.getQuestions();
         const disciplineDomains = DISCIPLINES[domain];
-        const pool = domain === 'All' ? [...bank] : bank.filter(q =>
+        const pool = selectedDomains ? bank.filter(q => selectedDomains.includes(q.domain))
+            : domain === 'All' ? [...bank] : bank.filter(q =>
             q.domain === domain || (disciplineDomains && disciplineDomains.includes(q.domain))
         );
 
-        // Full TOS applies to student mock exams. Short practice drills and the
-        // administrator's temporary difficulty preview keep their own flows.
-        const tos = !preview && mode === 'mock' && sessionUser.role === 'STUDENT'
+        // Full TOS applies to student mock exams; guest drills use available items.
+        const tos = mode === 'mock' && sessionUser.role === 'STUDENT'
             ? buildTosPlan({ count, domain, easyPct, medPct, hardPct }) : null;
         if (tos && count <= 10) {
             throw new Error('Choose more than 10 questions for a mock exam. Use a practice drill for 10 or fewer.');
@@ -487,15 +565,27 @@ const CpedleDB = {
         const medPool = pool.filter(q => q.difficulty.toLowerCase() === 'medium');
         const hardPool = pool.filter(q => q.difficulty.toLowerCase() === 'hard');
 
-        if (preview && (pool.length < count || easyPool.length < targetEasy ||
-            medPool.length < targetMed || hardPool.length < targetHard)) {
-            throw new Error('The bank does not have enough questions for this exact difficulty profile.');
-        }
-
         const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
 
         let selected;
-        if (tos) {
+        if (selectedDomains) {
+            const domainCounts = allocateTosCounts(selectedDomains, selectedDomains.map(() => 1), count);
+            selected = [];
+            for (const name of selectedDomains) {
+                const domainPool = pool.filter(q => q.domain === name);
+                const quota = domainCounts[name];
+                if (domainPool.length < quota) {
+                    throw new Error(`${name} has only ${domainPool.length} questions; ${quota} are needed for this practice set.`);
+                }
+                const targets = allocateTosCounts(DIFFICULTY_LEVELS,
+                    [easyPct, medPct, hardPct], quota);
+                const chosen = DIFFICULTY_LEVELS.flatMap(level =>
+                    shuffle(domainPool.filter(q => q.difficulty === level)).slice(0, targets[level]));
+                const remaining = shuffle(domainPool.filter(q => !chosen.some(item => item.id === q.id)));
+                selected.push(...chosen, ...remaining.slice(0, quota - chosen.length));
+            }
+            selected = shuffle(selected);
+        } else if (tos) {
             selected = selectTosQuestions(pool, tos);
         } else {
             selected = [];
@@ -503,7 +593,7 @@ const CpedleDB = {
             selected.push(...shuffle(medPool).slice(0, targetMed));
             selected.push(...shuffle(hardPool).slice(0, targetHard));
 
-            // Practice and preview retain the existing best-effort behavior.
+            // Guest practice and remediation retain the existing best-effort behavior.
             if (selected.length < count) {
                 const remaining = pool.filter(p => !selected.some(s => s.id === p.id));
                 selected.push(...shuffle(remaining).slice(0, count - selected.length));
@@ -514,13 +604,19 @@ const CpedleDB = {
             id: 'EXAM-' + Date.now(),
             mode,
             tos,
-            title: mode === 'practice'
+            scope: domain,
+            selectedDomains,
+            difficultyWeights: [easyPct, medPct, hardPct],
+            title: mode === 'student_practice'
+                ? (selectedDomains.length === 1 ? `${selectedDomains[0]} Practice Exam`
+                    : `${sessionUser.discipline} Practice Exam (${selectedDomains.length} domains)`)
+                : mode === 'practice'
                 ? (domain === 'All' ? 'Computer Engineering Practice Drill' : `${domain} Practice Drill`)
                 : mode === 'remediation' ? `${domain} Remediation Drill`
                 : (domain === 'All' ? 'Computer Engineering Comprehensive Simulation' : `${domain} Targeted Mock`),
             totalItems: selected.length,
             timeSeconds: timeMinutes * 60,
-            questions: selected.map(q => ({
+            questions: selected.map(q => chooseQuestionFormat({
                 id: q.id,
                 q: q.q,
                 opts: q.opts,
@@ -536,17 +632,44 @@ const CpedleDB = {
             }))
         };
 
-        if (!preview) sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(examPayload));
+        sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(examPayload));
         return examPayload;
     },
 
     getActiveExam() {
         const e = sessionStorage.getItem(STORAGE_KEYS.ACTIVE_EXAM);
-        return e ? JSON.parse(e) : null;
+        if (!e) return null;
+        const exam = JSON.parse(e);
+        // Keep older, already-open attempts consistent when revisiting an item.
+        if (exam.questions?.some(question => question.questionType === 'both')) {
+            exam.questions = exam.questions.map(chooseQuestionFormat);
+            sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(exam));
+        }
+        if (sessionUser.role === 'STUDENT') {
+            const domains = DISCIPLINES[sessionUser.discipline] || [];
+            const validLicensure = exam.mode === 'licensure' && exam.attemptId &&
+                exam.questions?.length === 100 && exam.timeSeconds === 3600 &&
+                exam.questions.every(question => domains.includes(question.domain));
+            const validScoped = ['mock', 'remediation', 'student_practice'].includes(exam.mode) &&
+                exam.questions?.length && exam.questions.every(question => domains.includes(question.domain)) &&
+                (exam.mode !== 'student_practice' ||
+                    (Array.isArray(exam.selectedDomains) && exam.selectedDomains.length > 0 &&
+                     exam.selectedDomains.every(name => domains.includes(name)) &&
+                     exam.questions.every(question => exam.selectedDomains.includes(question.domain))));
+            if (!validLicensure && !validScoped) {
+                sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
+                return null;
+            }
+        }
+        return exam;
     },
 
     saveActiveExamState(examData) {
         sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(examData));
+    },
+
+    discardActiveExam() {
+        sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
     },
 
     async finalizeExam() {
@@ -557,6 +680,13 @@ const CpedleDB = {
             method: 'POST',
             body: JSON.stringify({
                 title: exam.title,
+                mode: exam.mode,
+                ...(exam.mode === 'licensure' ? { attempt_id: exam.attemptId } : {}),
+                ...(exam.mode === 'student_practice' ? { selected_domains: exam.selectedDomains } : {}),
+                ...(exam.mode === 'mock' && exam.tos ? {
+                    scope: exam.scope,
+                    difficulty_weights: exam.difficultyWeights
+                } : {}),
                 answers: exam.questions.map(q => ({ id: q.id, userAns: q.userAns }))
             })
         });

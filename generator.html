@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Generator | cpedle</title>
+    <title>Practice Exam | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
@@ -11,7 +11,7 @@
 </head>
 <body>
     <script>
-        enforceRoleGuard(['STUDENT', 'ADMIN']);
+        enforceRoleGuard(['STUDENT']);
     </script>
 
     <!-- NAVIGATION BAR -->
@@ -35,8 +35,9 @@
             </div>
             <div class="nav__options" id="nav-options-bar">
                 <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
-                <a class="link" href="subjects.html">MOCK EXAMS</a>
-                <a class="link" href="generator.html" aria-current="page">GENERATOR</a>
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html" aria-current="page">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html">HISTORY</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
@@ -56,24 +57,22 @@
 
     <section class="section-padding container" style="max-width: 840px;">
         <div class="card" style="padding: 40px;">
-            <h1 class="text-center" style="font-size: 2.3rem;">Build a Custom Mock Exam</h1>
-            <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 600px;">Choose your exam size, scope, and difficulty. Mock exams follow the approved domain and cognitive-level TOS weights.</p>
+            <h1 class="text-center" style="font-size: 2.3rem;">Build a Practice Exam</h1>
+            <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 600px;">Choose the domains you want to practice, the number of questions, time limit, and difficulty. The fixed Mock Exam is a separate TOS-governed exam.</p>
 
             <form id="gen-form">
-                <!-- Domain Selection -->
-                <div class="form-group">
-                    <label for="gen-domain">Computer Engineering Discipline or Domain</label>
-                    <select id="gen-domain" data-taxonomy="domains" data-include-disciplines="true">
-                        <option value="All">All Disciplines (Comprehensive Simulation)</option>
-                    </select>
-                </div>
+                <fieldset class="form-group" id="gen-domains-fieldset">
+                    <legend>Practice domains in your registered discipline</legend>
+                    <label class="practice-domain-option"><input type="checkbox" id="gen-all-domains" checked> All domains</label>
+                    <div id="gen-domains-list" class="practice-domain-list" aria-label="Choose practice domains"></div>
+                </fieldset>
 
                 <!-- Parameters Grid -->
                 <div class="split-layout" style="gap: 20px; margin-bottom: 15px;">
                     <div class="form-group">
                         <label for="gen-count">Target Question Count</label>
                         <input type="number" id="gen-count" min="1" max="200" step="1" value="20" required>
-                        <small>1–10: short practice (score only, not saved). 11–200: TOS mock exam, subject to bank availability.</small>
+                        <small>Choose 1–200 questions, at least one per selected domain, subject to bank availability.</small>
                     </div>
 
                     <div class="form-group">
@@ -129,9 +128,9 @@
                     </div>
                 </div>
 
-                <div id="tos-preview" style="background: var(--bg); padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid var(--border);" aria-live="polite"></div>
+                <div id="tos-preview" class="tos-preview" aria-live="polite"></div>
                 <p id="gen-error" role="alert" style="display: none; color: var(--coral); margin-bottom: 15px;"></p>
-                <button type="submit" id="gen-submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Generate Mock Exam Set →</button>
+                <button type="submit" id="gen-submit" class="btn-solid-pill coral-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Start Practice Exam →</button>
             </form>
         </div>
     </section>
@@ -147,7 +146,7 @@
                     <a href="login.html">Examinee Portal</a>
                 </div>
                 <div class="footer-col">
-                    <a href="generator.html">Exam Generator</a>
+                    <a href="generator.html">Practice Exam</a>
                     <a href="exam-history.html">Score Reports</a>
                     <a href="remediation.html">Remediation Exams</a>
                     <a href="test-bank.html">Admin Test Bank</a>
@@ -206,32 +205,40 @@
             updateTosPreview();
         }
 
+        function selectedPracticeDomains() {
+            return [...document.querySelectorAll('#gen-domains-list input:checked')].map(input => input.value);
+        }
+
         function updateTosPreview() {
             const preview = document.getElementById('tos-preview');
             const count = Number(document.getElementById('gen-count').value);
-            const domain = document.getElementById('gen-domain').value;
-            document.getElementById('gen-submit').textContent = count >= 1 && count <= 10
-                ? 'Start Short Practice Drill →' : 'Generate Mock Exam Set →';
-            if (count <= 10 && count >= 1) {
-                preview.textContent = 'Short practice: your score is shown after the drill but is not saved. Full TOS quotas apply to mock exams above 10 items.';
+            const domains = selectedPracticeDomains();
+            if (!domains.length) {
+                preview.textContent = 'Choose at least one domain to practice.';
                 return;
             }
-            try {
-                const plan = CpedleDB.getTosPlan({ count, domain,
-                    easyPct: currentEasy, medPct: currentMed, hardPct: currentHard });
-                const list = counts => Object.entries(counts).filter(([, amount]) => amount > 0)
-                    .map(([name, amount]) => `${name.replace('|', ' — ')}: ${amount}`).join(' · ');
-                const coveredDomains = Object.values(plan.domains).filter(amount => amount > 0).length;
-                const coverageNote = coveredDomains < Object.keys(plan.domains).length
-                    ? `\nCoverage note: ${coveredDomains} of ${Object.keys(plan.domains).length} domains receive an item at this count.` : '';
-                preview.textContent = `Planned TOS for ${count} items (whole-question rounding):\n` +
-                    `Domains: ${list(plan.domains)}\n` +
-                    `Cognitive levels: ${list(plan.cognitive)}\n` +
-                    `Difficulty: ${list(plan.difficulty)}${coverageNote}\nBank availability is checked when you generate.`;
-                preview.style.whiteSpace = 'pre-line';
-            } catch (error) {
-                preview.textContent = error.message;
+            if (!Number.isInteger(count) || count < domains.length || count > 200) {
+                preview.textContent = `Choose ${domains.length}–200 questions so every selected domain gets at least one.`;
+                return;
             }
+            preview.replaceChildren();
+            const heading = document.createElement('h2');
+            heading.textContent = 'Practice Exam Summary';
+            preview.appendChild(heading);
+            const summary = document.createElement('p');
+            summary.textContent = `${count} questions across ${domains.length} selected domain${domains.length === 1 ? '' : 's'}.`;
+            preview.appendChild(summary);
+            const list = document.createElement('ul');
+            domains.forEach(name => {
+                const item = document.createElement('li');
+                item.textContent = name;
+                list.appendChild(item);
+            });
+            preview.appendChild(list);
+            const note = document.createElement('p');
+            note.className = 'tos-preview__note';
+            note.textContent = `Requested difficulty: Easy ${currentEasy}%, Medium ${currentMed}%, Hard ${currentHard}%. Domains are shared as evenly as possible; the difficulty mix may vary if the bank is short of a level.`;
+            preview.appendChild(note);
         }
 
         function balanceSliders(changed) {
@@ -258,28 +265,53 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await CpedleDB.ready;
-            const requestedDomain = new URLSearchParams(window.location.search).get('domain');
-            const domainSelect = document.getElementById('gen-domain');
-            if (requestedDomain && [...domainSelect.options].some(option => option.value === requestedDomain)) {
-                domainSelect.value = requestedDomain;
+            const user = CpedleDB.getCurrentUser();
+            if (user.role !== 'STUDENT') return;
+            if (!DISCIPLINES[user.discipline]) {
+                window.location.href = 'profile.html';
+                return;
             }
+            const requestedDomain = new URLSearchParams(window.location.search).get('domain');
+            const domainList = document.getElementById('gen-domains-list');
+            const allDomains = document.getElementById('gen-all-domains');
+            domainList.replaceChildren();
+            DISCIPLINES[user.discipline].forEach(domain => {
+                const label = document.createElement('label');
+                label.className = 'practice-domain-option';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.name = 'practice-domain';
+                input.value = domain;
+                input.checked = !DISCIPLINES[user.discipline].includes(requestedDomain) || domain === requestedDomain;
+                label.append(input, document.createTextNode(domain));
+                domainList.appendChild(label);
+            });
+            allDomains.checked = !DISCIPLINES[user.discipline].includes(requestedDomain);
             updateTosPreview();
         });
-        document.getElementById('gen-domain').addEventListener('change', updateTosPreview);
+        document.getElementById('gen-all-domains').addEventListener('change', event => {
+            document.querySelectorAll('#gen-domains-list input').forEach(input => { input.checked = event.target.checked; });
+            updateTosPreview();
+        });
+        document.getElementById('gen-domains-list').addEventListener('change', () => {
+            const boxes = [...document.querySelectorAll('#gen-domains-list input')];
+            document.getElementById('gen-all-domains').checked = boxes.every(input => input.checked);
+            updateTosPreview();
+        });
         document.getElementById('gen-count').addEventListener('input', updateTosPreview);
 
         document.getElementById('gen-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const count = parseInt(document.getElementById('gen-count').value);
             const timeMinutes = parseInt(document.getElementById('gen-time').value);
-            const domain = document.getElementById('gen-domain').value;
+            const domains = selectedPracticeDomains();
             const errorBox = document.getElementById('gen-error');
             errorBox.style.display = 'none';
             try {
                 const exam = CpedleDB.generateExam({
-                    count, timeMinutes, domain,
+                    count, timeMinutes, domains,
                     easyPct: currentEasy, medPct: currentMed, hardPct: currentHard,
-                    mode: count <= 10 ? 'practice' : 'mock'
+                    mode: 'student_practice'
                 });
                 if (!exam.questions.length) throw new Error('No questions are available for this selection yet.');
                 window.location.href = 'exam.html';

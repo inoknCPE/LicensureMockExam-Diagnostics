@@ -35,8 +35,9 @@
             </div>
             <div class="nav__options" id="nav-options-bar">
                 <a class="link" href="examinee-dashboard.html" aria-current="page">DASHBOARD</a>
-                <a class="link" href="subjects.html">MOCK EXAMS</a>
-                <a class="link" href="generator.html">GENERATOR</a>
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html">HISTORY</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
@@ -62,8 +63,8 @@
                 <p style="color: var(--gray-text); font-size: 0.95rem;">Track readiness, review topic deficiencies, and build custom test simulations.</p>
             </div>
             <div style="display: flex; gap: 12px;">
-                <a href="request-form.html" class="btn-outline-pill">Request Mock Exam</a>
-                <a href="generator.html" class="btn-solid-pill">Create Custom Exam</a>
+                <a href="generator.html" class="btn-solid-pill">Create Practice Exam</a>
+                <a href="mock-exam.html" class="btn-solid-pill">Take a Mock Licensure Exam</a>
             </div>
         </div>
 
@@ -104,16 +105,10 @@
                         <a href="remediation.html" class="btn-outline-pill" style="font-size: 0.85rem; padding: 6px 16px;">Open Remediation</a>
                     </div>
                     <hr class="footer-divider" style="margin: 15px 0;">
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="font-style: normal; margin-bottom: 5px;">Topic Proposal / Request</h4>
-                        <p style="font-size: 0.85rem; color: var(--gray-text); margin-bottom: 12px;">Need a specific mock exam set created? Submit a proposal to admins.</p>
-                        <a href="request-form.html" class="btn-outline-pill" style="font-size: 0.85rem; padding: 6px 16px;">Submit Request</a>
-                    </div>
-                    <hr class="footer-divider" style="margin: 15px 0;">
                     <div>
-                        <h4 style="font-style: normal; margin-bottom: 5px;">Build Custom Mock Set</h4>
+                        <h4 style="font-style: normal; margin-bottom: 5px;">Build Practice Exam</h4>
                         <p style="font-size: 0.85rem; color: var(--gray-text); margin-bottom: 12px;">Select custom difficulty profiles and time allocations.</p>
-                        <a href="generator.html" class="btn-solid-pill" style="font-size: 0.85rem; padding: 6px 16px;">Launch Generator</a>
+                        <a href="generator.html" class="btn-solid-pill" style="font-size: 0.85rem; padding: 6px 16px;">Create Practice Exam</a>
                     </div>
                 </div>
             </div>
@@ -131,7 +126,7 @@
                     <a href="login.html">Examinee Portal</a>
                 </div>
                 <div class="footer-col">
-                    <a href="generator.html">Exam Generator</a>
+                    <a href="generator.html">Practice Exam</a>
                     <a href="exam-history.html">Score Reports</a>
                     <a href="remediation.html">Remediation Exams</a>
                     <a href="test-bank.html">Admin Test Bank</a>
@@ -162,10 +157,11 @@
             }
 
             const history = CpedleDB.getExamHistory();
-            document.getElementById('stat-attempts').innerText = history.length;
+            const mockHistory = history.filter(item => ['licensure', 'mock', 'legacy'].includes(item.mode));
+            document.getElementById('stat-attempts').innerText = mockHistory.length;
 
-            if (history.length > 0) {
-                const latest = history[0];
+            if (mockHistory.length > 0) {
+                const latest = mockHistory[0];
                 document.getElementById('stat-overall').innerText = `${latest.scorePct}%`;
                 
                 let deficientCount = 0;
@@ -174,9 +170,12 @@
                 }
                 document.getElementById('stat-deficiencies').innerText = deficientCount;
 
+            }
+
+            if (history.length > 0) {
                 const recentContainer = document.getElementById('recent-history-list');
                 recentContainer.innerHTML = '';
-                
+
                 history.slice(0, 3).forEach(item => {
                     const row = document.createElement('div');
                     row.className = 'card';
@@ -199,7 +198,7 @@
             } else {
                 document.getElementById('recent-history-list').innerHTML = `
                     <div class="card" style="padding: 24px; text-align: center; color: var(--gray-text);">
-                        No mock exams taken yet. Start with a diagnostic exam to see your ratings!
+                        No exams taken yet. Start with a mock or practice exam to see your results.
                     </div>
                 `;
             }

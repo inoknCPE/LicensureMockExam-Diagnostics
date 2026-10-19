@@ -83,7 +83,7 @@
                     <a href="login.html">Examinee Portal</a>
                 </div>
                 <div class="footer-col">
-                    <a href="generator.html">Exam Generator</a>
+                    <a href="generator.html">Practice Exam</a>
                     <a href="exam-history.html">Score Reports</a>
                     <a href="remediation.html">Remediation Exams</a>
                     <a href="test-bank.html">Admin Test Bank</a>
@@ -126,7 +126,7 @@
 
             const res = await CpedleDB.login(email, pass);
             if (res.success) {
-                if (!res.user.name || (res.user.role !== 'ADMIN' && !res.user.discipline)) {
+                if (!res.user.name || (res.user.role === 'STUDENT' && !res.user.discipline)) {
                     window.location.href = 'profile.html';
                 } else if (res.user.role === 'ADMIN') {
                     window.location.href = 'admin-dashboard.html';

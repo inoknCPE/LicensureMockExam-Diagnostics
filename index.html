@@ -146,7 +146,7 @@
             <div id="disciplines" class="disciplines-grid">
                 
                 <!-- DISCIPLINE 1 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Network Engineer">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 1</span>
                         <h2 class="serif-heading discipline-title">Network Engineer</h2>
@@ -159,13 +159,12 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Network Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Network Engineer')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Network Engineer')">Practice Drill</button>
                     </div>
                 </div>
 
                 <!-- DISCIPLINE 2 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Systems Operations Engineer">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 2</span>
                         <h2 class="serif-heading discipline-title">Systems Operations</h2>
@@ -178,13 +177,12 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Systems Operations Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Systems Operations Engineer')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Systems Operations Engineer')">Practice Drill</button>
                     </div>
                 </div>
 
                 <!-- DISCIPLINE 3 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Computer Systems Architect">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 3</span>
                         <h2 class="serif-heading discipline-title">Systems Architect</h2>
@@ -197,13 +195,12 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Computer Systems Architect')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Computer Systems Architect')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Computer Systems Architect')">Practice Drill</button>
                     </div>
                 </div>
 
                 <!-- DISCIPLINE 4 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Software Developer">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 4</span>
                         <h2 class="serif-heading discipline-title">Software Developer</h2>
@@ -216,13 +213,12 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Software Developer')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Software Developer')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Software Developer')">Practice Drill</button>
                     </div>
                 </div>
 
                 <!-- DISCIPLINE 5 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Algorithm Engineer">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 5</span>
                         <h2 class="serif-heading discipline-title">Algorithm Engineer</h2>
@@ -235,13 +231,12 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Algorithm Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Algorithm Engineer')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Algorithm Engineer')">Practice Drill</button>
                     </div>
                 </div>
 
                 <!-- DISCIPLINE 6 -->
-                <div class="discipline-card">
+                <div class="discipline-card" data-discipline="Digital Design Engineer">
                     <div>
                         <span class="discipline-badge">DISCIPLINE 6</span>
                         <h2 class="serif-heading discipline-title">Digital Design</h2>
@@ -254,31 +249,16 @@
                         </ul>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-outline-pill" onclick="startDrill('Digital Design Engineer')">Practice Drill</button>
-                        <button class="btn-solid-pill" data-student-only hidden onclick="startMock('Digital Design Engineer')">Mock Exam</button>
+                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Digital Design Engineer')">Practice Drill</button>
                     </div>
                 </div>
 
             </div>
 
-            <!-- COMPREHENSIVE SIMULATION BANNER -->
-            <div class="discipline-card featured" style="padding: 32px; margin-bottom: 40px; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
-                <div style="max-width: 600px;">
-                    <span class="discipline-badge">ALL DISCIPLINES</span>
-                    <h2 class="serif-heading" style="font-size: 1.8rem; margin: 6px 0;">Comprehensive Computer Engineering Simulation</h2>
-                    <p style="color: var(--gray-text); font-size: 0.92rem; margin: 0;">Practice across all available domains in a single timed exam. Designed for comprehensive licensure test preparation.</p>
-                </div>
-                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button class="btn-outline-pill" onclick="startDrill('All')">Practice Drill</button>
-                    <button class="btn-solid-pill coral-btn" data-student-only hidden onclick="startMock('All')">Full Mock Exam</button>
-                </div>
-            </div>
-
-            <!-- BOTTOM PROMO CALLOUT -->
             <div class="discipline-card" data-student-only hidden style="padding: 32px; text-align: center; border: 1px dashed var(--border); background: var(--surface); align-items: center;">
-                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 8px;">Looking for Custom Topic Combinations?</h2>
-                <p style="color: var(--gray-text); font-size: 0.95rem; margin-bottom: 20px; max-width: 600px;">Build a custom mock set with adjustable difficulty ratios and time limits using the Exam Generator.</p>
-                <button class="btn-solid-pill lg" onclick="handleCustomGeneratorAccess()">Open Custom Exam Generator →</button>
+                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 8px;">Looking for a custom practice exam?</h2>
+                <p style="color: var(--gray-text); font-size: 0.95rem; margin-bottom: 20px; max-width: 600px;">Choose one or more domains in your discipline, plus the question count, time limit, and difficulty.</p>
+                <a class="btn-solid-pill lg" href="generator.html">Create Practice Exam →</a>
             </div>
         </div>
     </main>
@@ -296,23 +276,17 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await CpedleDB.ready;
             renderSessionNavigation(document.getElementById('user-nav-options'));
-            const isStudent = CpedleDB.getCurrentUser().role === 'STUDENT';
-            document.querySelectorAll('[data-student-only]').forEach(item => { item.hidden = !isStudent; });
+            showStudentMockLinks();
+            if (CpedleDB.getCurrentUser().role !== 'GUEST') {
+                document.querySelectorAll('.card-actions').forEach(actions => actions.remove());
+            }
         });
 
         async function startDrill(domain) {
             await CpedleDB.ready;
+            if (CpedleDB.getCurrentUser().role !== 'GUEST') return;
             CpedleDB.generateExam({ domain, count: 10, mode: 'practice', timeMinutes: 15 });
             window.location.href = 'exam.html';
-        }
-
-        async function startMock(domain) {
-            await CpedleDB.ready;
-            if (CpedleDB.getCurrentUser().role !== 'STUDENT') {
-                window.location.href = 'login.html';
-                return;
-            }
-            window.location.href = 'generator.html?domain=' + encodeURIComponent(domain);
         }
     </script>
 </body>

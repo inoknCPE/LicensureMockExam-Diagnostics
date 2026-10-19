@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Question Submissions | cpedle Examiner</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+    <style>
+        .submissions-table-wrap {
+            margin-top: 24px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+        .submissions-table { width: 100%; min-width: 620px; border-collapse: collapse; }
+        .submissions-table th, .submissions-table td {
+            padding: 16px 20px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid var(--border);
+        }
+        .submissions-table tr:last-child td { border-bottom: 0; }
+        .submissions-table th { background: var(--bg); font-weight: 700; }
+        .submission-status { font-weight: 700; text-transform: capitalize; }
+        .submission-status[data-status="approved"] { color: var(--dark-teal); }
+        .submission-status[data-status="rejected"] { color: var(--coral); }
+    </style>
+</head>
+<body>
+    <nav class="new-nav"><div class="nav__content">
+        <a class="nav-logo-box" href="examiner-dashboard.html"><span>cpedle Examiner</span></a>
+        <div class="nav__control">
+            <input type="checkbox" id="menu" class="sr-only">
+            <label for="menu"><span class="sr-only">Toggle Menu</span>
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                </svg>
+            </label>
+        </div>
+        <div class="nav__options" id="examiner-nav-bar">
+            <a class="link" href="examiner-dashboard.html">DASHBOARD</a>
+            <a class="link" href="test-bank.html">TEST BANK</a>
+            <a class="link" href="examiner-question-submissions.html" aria-current="page">QUESTION SUBMISSIONS</a>
+            <a class="link" href="profile.html">PROFILE</a>
+            <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+        </div>
+    </div></nav>
+
+    <main class="section-padding container">
+        <h1>Question Submissions</h1>
+        <p>Track the questions and edits you sent for administrator approval.</p>
+        <div class="submissions-table-wrap">
+            <table class="submissions-table">
+                <thead><tr><th scope="col">Question</th><th scope="col">Action</th>
+                    <th scope="col">Status</th><th scope="col">Submitted</th></tr></thead>
+                <tbody id="submissions-body"><tr><td colspan="4">Loading submissions…</td></tr></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['EXAMINER']);
+            if (CpedleDB.getCurrentUser().role !== 'EXAMINER') return;
+            renderSessionNavigation(document.getElementById('examiner-nav-bar'),
+                'examiner-question-submissions.html');
+            const tbody = document.getElementById('submissions-body');
+            try {
+                const changes = await apiCall('/questions/change-requests');
+                tbody.innerHTML = changes.length ? changes.map(change => {
+                    const status = String(change.status || '').toLowerCase();
+                    return `<tr>
+                        <td>${escapeHtml(change.question.q)}</td>
+                        <td>${escapeHtml(change.action)}</td>
+                        <td><span class="submission-status" data-status="${escapeHtml(status)}">${escapeHtml(status)}</span></td>
+                        <td>${escapeHtml(change.submitted_at)}</td>
+                    </tr>`;
+                }).join('') : '<tr><td colspan="4">No question submissions yet.</td></tr>';
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4" role="alert">${escapeHtml(error.message)}</td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>

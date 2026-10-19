@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printable Exam Report | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/reports.css">
+    <script src="js/data.js"></script>
+</head>
+<body>
+    <main class="report-page">
+        <div class="report-toolbar no-print">
+            <a id="back-link" class="btn-outline-pill" href="exam-history.html">← Back</a>
+            <button id="print-button" class="btn-solid-pill" type="button" disabled>Print / Save as PDF</button>
+        </div>
+        <article id="report-content" class="print-sheet" aria-live="polite">
+            <p>Loading report…</p>
+        </article>
+    </main>
+    <script>
+        function reportTable(title, planned, actual) {
+            const labels = [...new Set([...Object.keys(planned || {}), ...Object.keys(actual || {})])];
+            return `<section class="report-section"><h2>${escapeHtml(title)}</h2>
+                <table class="report-table"><thead><tr><th scope="col">Category</th><th scope="col">Planned</th><th scope="col">Actual</th></tr></thead>
+                <tbody>${labels.map(label => `<tr><th scope="row">${escapeHtml(label)}</th>
+                    <td>${planned?.[label] ?? '—'}</td><td>${actual?.[label] ?? 0}</td></tr>`).join('')}</tbody></table></section>`;
+        }
+
+        function renderCard(item) {
+            const rating = item.scorePct >= 75 ? 'Proficient' : item.scorePct >= 60 ? 'Satisfactory' : 'Needs Remediation';
+            return `<header class="report-heading"><p class="report-kicker">cpedle · Individual Diagnostic Performance Card</p>
+                <h1>Diagnostic Performance Card</h1><p>Recorded examination result</p></header>
+                <dl class="report-facts">
+                    <div><dt>Student</dt><dd>${escapeHtml(item.studentName || item.username)}</dd></div>
+                    <div><dt>Exam scope</dt><dd>${escapeHtml(item.discipline || 'Not recorded')}</dd></div>
+                    <div><dt>Exam</dt><dd>${escapeHtml(item.title)}</dd></div>
+                    <div><dt>Completed</dt><dd>${escapeHtml(item.date)}</dd></div>
+                    <div><dt>Attempt ID</dt><dd>#${item.id}</dd></div>
+                </dl>
+                <div class="report-score"><strong>${item.scorePct}%</strong><span>${item.correctItems} of ${item.totalItems} correct · ${rating}</span></div>
+                <section class="report-section"><h2>Domain performance</h2>
+                    <table class="report-table"><thead><tr><th scope="col">Domain</th><th scope="col">Correct</th><th scope="col">Score</th><th scope="col">Rating</th></tr></thead>
+                    <tbody>${item.domains.map(domain => `<tr><th scope="row">${escapeHtml(domain.name)}</th>
+                        <td>${domain.correct}/${domain.total}</td><td>${domain.scorePct}%</td><td>${escapeHtml(domain.tag)}</td></tr>`).join('')}</tbody></table>
+                </section><p class="report-footnote">Ratings: Deficient below 60%; Satisfactory 60–74%; Proficient 75–100%.</p>`;
+        }
+
+        function renderTos(item) {
+            const report = item.report;
+            let details;
+            if (report?.mode === 'licensure') {
+                details = `<p class="report-status">100-item mock licensure exam within the student's registered discipline. ${report.planned ? (report.status === 'met' ? 'All domain × cognitive TOS counts matched.' : 'The planned and delivered TOS counts differ.') : 'A planned TOS snapshot was not recorded for this attempt.'}</p>
+                    ${reportTable('Domain distribution', report.planned?.domains, report.actual.domains)}
+                    ${reportTable('Cognitive levels', report.planned?.cognitive, report.actual.cognitive)}
+                    ${reportTable('Domain × cognitive level', report.planned?.joint, report.actual.joint)}
+                    ${reportTable('Difficulty (observed, not a fixed quota)', null, report.actual.difficulty)}`;
+            } else if (!report?.planned) {
+                details = '<p class="report-notice">TOS details unavailable for this attempt. Older attempts and remediation drills did not record a planned TOS snapshot.</p>';
+            } else {
+                const status = report.status === 'met' ? 'All planned counts matched' : 'Planned counts did not all match';
+                details = `<p class="report-status">${status}</p>
+                    ${reportTable('Domain distribution', report.planned.domains, report.actual.domains)}
+                    ${reportTable('Cognitive levels', report.planned.cognitive, report.actual.cognitive)}
+                    ${reportTable('Difficulty', report.planned.difficulty, report.actual.difficulty)}`;
+            }
+            return `<header class="report-heading"><p class="report-kicker">cpedle · Internal TOS record</p>
+                <h1>TOS Accreditation Compliance Sheet</h1>
+                <p>Planned and delivered item distributions for one attempt</p></header>
+                <dl class="report-facts">
+                    <div><dt>Student</dt><dd>${escapeHtml(item.studentName || item.username)}</dd></div>
+                    <div><dt>Discipline</dt><dd>${escapeHtml(item.discipline || 'Not recorded')}</dd></div>
+                    <div><dt>Exam</dt><dd>${escapeHtml(item.title)}</dd></div>
+                    <div><dt>Scope</dt><dd>${report?.mode === 'licensure' ? escapeHtml(item.discipline || 'Not recorded') : escapeHtml(report?.scope || 'Unavailable')}</dd></div>
+                    <div><dt>Completed</dt><dd>${escapeHtml(item.date)}</dd></div>
+                    <div><dt>Attempt ID</dt><dd>#${item.id}</dd></div>
+                    <div><dt>Items</dt><dd>${item.totalItems}</dd></div>
+                </dl>${details}
+                <p class="report-footnote">Internal evidence of this exam's item distribution. It is not an external accreditation certificate or a configured passing-score decision.</p>`;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const content = document.getElementById('report-content');
+            try {
+                await CpedleDB.ready;
+                const user = CpedleDB.getCurrentUser();
+                const params = new URLSearchParams(location.search);
+                const id = params.get('id');
+                const type = params.get('type') === 'tos' ? 'tos' : 'card';
+                if (!/^\d+$/.test(id || '') || !['STUDENT', 'ADMIN'].includes(user.role) ||
+                    (type === 'tos' && user.role !== 'ADMIN')) throw new Error('This report is unavailable.');
+                const response = await fetch(`/api/reports/exams/${id}`, { credentials: 'same-origin' });
+                if (!response.ok) throw new Error('The exam report could not be found.');
+                const item = await response.json();
+                document.getElementById('back-link').href = user.role === 'ADMIN' ? 'admin-reports.html' : 'exam-history.html';
+                content.innerHTML = type === 'tos' ? renderTos(item) : renderCard(item);
+                document.title = `${type === 'tos' ? 'TOS Sheet' : 'Performance Card'} #${item.id} | cpedle`;
+                document.getElementById('print-button').disabled = false;
+            } catch (error) {
+                content.textContent = error.message;
+            }
+        });
+        document.getElementById('print-button').addEventListener('click', () => window.print());
+    </script>
+</body>
+</html>

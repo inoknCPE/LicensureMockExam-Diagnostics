@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/reports.css">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <nav class="new-nav no-print">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box"><span>cpedle Admin</span></a>
+            <div class="nav__control"><input type="checkbox" id="menu" class="sr-only"><label for="menu">☰ <span class="sr-only">Toggle Menu</span></label></div>
+            <div class="nav__options" id="admin-nav-bar">
+                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <a class="link" href="admin-question-approvals.html">QUESTION APPROVALS</a>
+                <a class="link" href="admin-reports.html" aria-current="page">REPORTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+    <main class="reports-main">
+        <div class="no-print">
+            <h1>Cards &amp; Roster Printing</h1>
+            <p>Print individual performance cards, TOS sheets, or a filtered cohort summary roster.</p>
+            <div class="reports-filter">
+                <label>Discipline<select id="discipline-filter"><option value="">All disciplines</option></select></label>
+                <label>From date<input type="date" id="from-filter"></label>
+                <label>Through date<input type="date" id="to-filter"></label>
+                <label><span>Attempts</span><select id="attempt-filter"><option value="latest">Latest per student</option><option value="all">All attempts</option></select></label>
+                <label><span>Legacy records</span><select id="legacy-filter"><option value="exclude">Exclude (TOS unknown)</option><option value="include">Include</option></select></label>
+            </div>
+            <p class="report-footnote">Remediation drills are excluded. Older attempts have no recorded TOS snapshot and are excluded unless you include legacy records.</p>
+        </div>
+        <article class="print-sheet" id="roster-sheet" aria-live="polite">
+            <header class="report-heading"><p class="report-kicker">cpedle · Administrator report</p>
+                <h1>Cohort Mock Board Summary Roster</h1><p id="roster-scope">Loading results…</p></header>
+            <div class="reports-actions no-print"><span id="roster-count"></span>
+                <button type="button" id="print-roster" class="btn-solid-pill" disabled>Print Roster / Save as PDF</button></div>
+            <div class="report-table-wrap"><table class="report-table"><thead><tr>
+                <th scope="col">Student</th><th scope="col">Discipline</th><th scope="col">Exam</th>
+                <th scope="col">Date</th><th scope="col">Correct</th><th scope="col">Score</th>
+                <th scope="col" class="no-print">Reports</th>
+            </tr></thead><tbody id="roster-body"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
+            <p class="report-footnote">This roster summarizes recorded mock attempts. No passing threshold has been configured.</p>
+        </article>
+    </main>
+    <script>
+        let attempts = [];
+        function renderRoster() {
+            const discipline = document.getElementById('discipline-filter').value;
+            const from = document.getElementById('from-filter').value;
+            const to = document.getElementById('to-filter').value;
+            const includeLegacy = document.getElementById('legacy-filter').value === 'include';
+            const latest = document.getElementById('attempt-filter').value === 'latest';
+            const selected = attempts.filter(item =>
+                (item.mode === 'mock' || item.mode === 'licensure' || (includeLegacy && item.mode === 'legacy')) &&
+                (!discipline || item.discipline === discipline) &&
+                (!from || item.date.slice(0, 10) >= from) &&
+                (!to || item.date.slice(0, 10) <= to));
+            const seen = new Set();
+            const rows = selected.filter(item => {
+                if (!latest) return true;
+                if (seen.has(item.username)) return false;
+                seen.add(item.username);
+                return true;
+            });
+            const body = document.getElementById('roster-body');
+            body.innerHTML = rows.length ? rows.map(item => `<tr>
+                <th scope="row">${escapeHtml(item.studentName || item.username)}<br><small>${escapeHtml(item.username)}</small></th>
+                <td>${escapeHtml(item.discipline || 'Not recorded')}</td>
+                <td>${escapeHtml(item.title)}${item.mode === 'legacy' ? '<br><small>Legacy; type unknown</small>' : ''}</td>
+                <td>${escapeHtml(item.date)}</td><td>${item.correctItems}/${item.totalItems}</td><td>${item.scorePct}%</td>
+                <td class="no-print"><a class="report-link" href="print-report.html?type=card&id=${item.id}">Card</a>
+                    · <a class="report-link" href="print-report.html?type=tos&id=${item.id}">TOS sheet</a></td>
+                </tr>`).join('') : '<tr><td colspan="7">No recorded mock attempts match these filters.</td></tr>';
+            const summary = [discipline || 'All disciplines', from ? `from ${from}` : '', to ? `through ${to}` : '',
+                latest ? 'latest attempt per student' : 'all attempts'].filter(Boolean).join(' · ');
+            document.getElementById('roster-scope').textContent = summary;
+            document.getElementById('roster-count').textContent = `${rows.length} student result${rows.length === 1 ? '' : 's'}`;
+            document.getElementById('print-roster').disabled = rows.length === 0;
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await enforceRoleGuard(['ADMIN']);
+                const response = await fetch('/api/admin/reports/roster', { credentials: 'same-origin' });
+                if (!response.ok) throw new Error('Could not load the roster.');
+                attempts = await response.json();
+                const select = document.getElementById('discipline-filter');
+                Object.keys(DISCIPLINES).forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = option.textContent = name;
+                    select.appendChild(option);
+                });
+                document.querySelectorAll('.reports-filter :is(select, input)').forEach(input =>
+                    input.addEventListener('change', renderRoster));
+                renderRoster();
+            } catch (error) {
+                document.getElementById('roster-body').innerHTML = `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
+            }
+        });
+        document.getElementById('print-roster').addEventListener('click', () => window.print());
+    </script>
+</body>
+</html>

@@ -6,6 +6,29 @@
     <title>Question Approvals | cpedle Admin</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="js/data.js"></script>
+    <style>
+        #question-approval-list { display: grid; gap: 22px; margin-top: 24px; }
+        .approval-card { border: 1px solid var(--border); }
+        .approval-header { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+        .approval-header h2 { font-size: 1.35rem; line-height: 1.3; }
+        .approval-header p { color: var(--gray-text); font-size: 0.9rem; }
+        .approval-badge { border-radius: 999px; padding: 4px 11px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
+        .approval-badge.add { background: rgba(46, 196, 182, 0.14); color: var(--dark-teal); }
+        .approval-badge.edit { background: rgba(255, 107, 107, 0.14); color: var(--coral); }
+        .approval-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 18px; }
+        .approval-preview { border: 1px solid var(--border); border-radius: 12px; padding: 22px; background: var(--surface); }
+        .approval-preview h3 { font-size: 1.05rem; margin-bottom: 14px; }
+        .approval-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; white-space: pre-wrap; }
+        .approval-options { display: grid; gap: 9px; list-style: none; margin-bottom: 16px; }
+        .approval-options li { border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; overflow-wrap: anywhere; }
+        .approval-options li.correct { border-color: var(--teal); background: color-mix(in srgb, var(--teal) 9%, var(--surface)); font-weight: 600; }
+        .approval-option-letter { display: inline-block; min-width: 28px; font-weight: 700; }
+        .approval-correct-note { color: var(--dark-teal); font-size: 0.85rem; margin-left: 8px; }
+        .approval-tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 15px 0 0; }
+        .approval-tags span { border-radius: 999px; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; font-size: 0.8rem; }
+        .approval-explanation { margin-top: 14px; color: var(--gray-text); font-size: 0.9rem; white-space: pre-wrap; }
+        .approval-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+    </style>
 </head>
 <body>
     <nav class="new-nav">
@@ -29,10 +52,9 @@
             <div class="nav__options" id="admin-nav-bar">
                 <a class="link" href="admin-dashboard.html">OVERVIEW</a>
                 <a class="link" href="test-bank.html">TEST BANK</a>
-                <a class="link" href="admin-generator.html">GENERATOR</a>
-                <a class="link" href="admin-requests.html">REQUESTS</a>
                 <a class="link" href="admin-accounts.html">ACCOUNTS</a>
                 <a class="link" href="admin-question-approvals.html" aria-current="page" style="color: var(--teal); font-weight: 700;">QUESTION APPROVALS</a>
+                <a class="link" href="admin-reports.html">REPORTS</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -44,6 +66,56 @@
         <div id="question-approval-list"></div>
     </section>
     <script>
+        function questionPreview(question, heading) {
+            const preview = document.createElement('section');
+            preview.className = 'approval-preview';
+            const title = document.createElement('h3');
+            title.textContent = heading;
+            preview.appendChild(title);
+
+            const prompt = document.createElement('p');
+            prompt.className = 'approval-question';
+            prompt.textContent = question.q || 'Question text unavailable';
+            preview.appendChild(prompt);
+
+            const options = document.createElement('ol');
+            options.className = 'approval-options';
+            (question.opts || []).forEach((option, index) => {
+                const row = document.createElement('li');
+                if (index === question.ans) row.className = 'correct';
+                const letter = document.createElement('span');
+                letter.className = 'approval-option-letter';
+                letter.textContent = `${String.fromCharCode(65 + index)}.`;
+                row.appendChild(letter);
+                row.appendChild(document.createTextNode(String(option).replace(/^[A-E][.)]\s*/, '')));
+                if (index === question.ans) {
+                    const correct = document.createElement('span');
+                    correct.className = 'approval-correct-note';
+                    correct.textContent = '✓ Correct answer';
+                    row.appendChild(correct);
+                }
+                options.appendChild(row);
+            });
+            preview.appendChild(options);
+
+            const tags = document.createElement('div');
+            tags.className = 'approval-tags';
+            for (const [label, value] of [['Domain', question.domain],
+                ['Cognitive level', question.cognitive], ['Difficulty', question.difficulty]]) {
+                const tag = document.createElement('span');
+                tag.textContent = `${label}: ${value || 'Not specified'}`;
+                tags.appendChild(tag);
+            }
+            preview.appendChild(tags);
+            if (question.explanation?.trim()) {
+                const explanation = document.createElement('p');
+                explanation.className = 'approval-explanation';
+                explanation.textContent = `Explanation: ${question.explanation}`;
+                preview.appendChild(explanation);
+            }
+            return preview;
+        }
+
         async function loadQuestionApprovals() {
             const changes = await apiCall('/questions/change-requests');
             const list = document.getElementById('question-approval-list');
@@ -56,31 +128,44 @@
             }
             changes.forEach(change => {
                 const card = document.createElement('article');
-                card.className = 'card';
-                card.style.marginBottom = '20px';
+                card.className = 'card approval-card';
+                const header = document.createElement('div');
+                header.className = 'approval-header';
+                const badge = document.createElement('span');
+                badge.className = `approval-badge ${change.action.toLowerCase()}`;
+                badge.textContent = change.action === 'ADD' ? 'NEW QUESTION' : 'EDIT REQUEST';
+                header.appendChild(badge);
+                const details = document.createElement('div');
                 const heading = document.createElement('h2');
-                heading.textContent = `${change.action} • ${change.question.id || change.target_question_id}`;
-                card.appendChild(heading);
+                heading.textContent = `Item ${change.question.id || change.target_question_id}`;
+                details.appendChild(heading);
                 const byline = document.createElement('p');
                 byline.textContent = `Submitted by ${change.proposer} on ${change.submitted_at}`;
-                card.appendChild(byline);
+                details.appendChild(byline);
+                header.appendChild(details);
+                card.appendChild(header);
+
+                const comparison = document.createElement('div');
+                comparison.className = 'approval-comparison';
                 if (change.action === 'EDIT') {
                     const original = CpedleDB.getQuestions().find(q => q.id === change.target_question_id);
-                    const old = document.createElement('p');
-                    old.textContent = original ? `Current question: ${original.q}` :
-                        'The original question is no longer in the live bank.';
-                    card.appendChild(old);
+                    if (original) comparison.appendChild(questionPreview(original, 'Current question'));
+                    else {
+                        const missing = document.createElement('p');
+                        missing.textContent = 'The original question is no longer in the live bank.';
+                        comparison.appendChild(missing);
+                    }
                 }
-                const proposed = document.createElement('pre');
-                proposed.style.whiteSpace = 'pre-wrap';
-                proposed.textContent = JSON.stringify(change.question, null, 2);
-                card.appendChild(proposed);
+                comparison.appendChild(questionPreview(change.question,
+                    change.action === 'EDIT' ? 'Proposed changes' : 'Proposed question'));
+                card.appendChild(comparison);
+                const actions = document.createElement('div');
+                actions.className = 'approval-actions';
                 for (const [label, approve] of [['Approve', true], ['Reject', false]]) {
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = approve ? 'btn-solid-pill' : 'btn-outline-pill';
                     button.textContent = label;
-                    button.style.marginRight = '8px';
                     button.addEventListener('click', async () => {
                         if (!confirm(`${label} this proposed ${change.action.toLowerCase()}?`)) return;
                         const message = document.getElementById('review-message');
@@ -97,8 +182,9 @@
                             message.textContent = error.message;
                         }
                     });
-                    card.appendChild(button);
+                    actions.appendChild(button);
                 }
+                card.appendChild(actions);
                 list.appendChild(card);
             });
         }

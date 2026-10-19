@@ -13,16 +13,17 @@ APP_DIR = Path(__file__).resolve().parent
 HTML_PAGES = {page.name for page in APP_DIR.glob("*.html")}
 PAGE_ROLES = {
     "admin-dashboard.html": {"ADMIN"},
-    "admin-generator.html": {"ADMIN"},
-    "admin-requests.html": {"ADMIN"},
     "admin-accounts.html": {"ADMIN"},
     "admin-question-approvals.html": {"ADMIN"},
+    "admin-reports.html": {"ADMIN"},
+    "print-report.html": {"STUDENT", "ADMIN"},
     "test-bank.html": {"ADMIN", "EXAMINER"},
+    "examiner-question-submissions.html": {"EXAMINER"},
     "examiner-dashboard.html": {"ADMIN", "EXAMINER"},
     "examinee-dashboard.html": {"STUDENT"},
     "exam-history.html": {"STUDENT"},
     "generator.html": {"STUDENT"},
-    "request-form.html": {"STUDENT"},
+    "mock-exam.html": {"STUDENT"},
     "remediation.html": {"STUDENT"},
     "profile.html": {"STUDENT", "EXAMINER", "ADMIN"},
 }
@@ -42,6 +43,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(router)
+
+
+@app.middleware("http")
+async def prevent_stale_pages(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith(".html") or path.startswith(("/js/", "/css/", "/api/")):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/health", tags=["System"])
