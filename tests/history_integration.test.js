@@ -22,7 +22,7 @@ test('remediation uses the latest recorded result for each domain', () => {
 });
 
 test('admin report loads the roster of all users rather than a missing endpoint', () => {
-    const html = fs.readFileSync(path.join(root, 'admin-reports.html'), 'utf8');
+    const html = fs.readFileSync(path.join(root, 'pages', 'admin-reports.html'), 'utf8');
     assert.match(html, /apiCall\('\/admin\/reports\/roster'\)/);
     assert.match(html, /apiCall\('\/admin\/users'\)/);
     assert.match(html, /rpt-attempts-body/);

@@ -1,5 +1,6 @@
 """Direct backend tests; no HTTP test client dependency is required."""
 
+import os
 import sys
 import tempfile
 import time
@@ -13,9 +14,14 @@ from starlette.requests import Request
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+os.environ.pop("SUPABASE_DB_URL", None)
+os.environ.pop("DATABASE_URL", None)
+os.environ["PYTHON_DOTENV_DISABLED"] = "1"
 
 import backend  # noqa: E402
-from server import html_page  # noqa: E402
+from server import health_check, home_page, html_page  # noqa: E402
+
+DEFAULT_DB_PATH = backend.DB_PATH
 
 
 def request(cookie="", method="GET", csrf=""):
@@ -32,6 +38,55 @@ def request(cookie="", method="GET", csrf=""):
 
 
 class AccessTests(unittest.TestCase):
+    def test_account_database_path_and_automatic_creation(self):
+        self.assertEqual(
+            DEFAULT_DB_PATH,
+            ROOT / "databases" / "account_credential.sqlite3",
+        )
+        generated_path = Path(self.temp.name) / "databases" / "account_credential.sqlite3"
+        with patch.object(backend, "DB_PATH", generated_path):
+            backend.initialize()
+        self.assertTrue(generated_path.is_file())
+
+    def test_supabase_connection_failure_uses_local_database_when_enabled(self):
+        local_path = Path(self.temp.name) / "offline.sqlite3"
+        with (
+            patch.object(backend, "DATABASE_URL", "postgresql://unavailable"),
+            patch.object(backend, "LOCAL_FALLBACK_ENABLED", True),
+            patch.object(backend, "USING_OFFLINE_FALLBACK", False),
+            patch.object(backend, "DB_PATH", local_path),
+            patch.object(
+                backend.psycopg,
+                "connect",
+                side_effect=backend.psycopg.OperationalError("database unavailable"),
+            ),
+        ):
+            backend.initialize()
+            self.assertTrue(local_path.is_file())
+            self.assertEqual(backend.DATABASE_URL, None)
+            self.assertEqual(backend.database_mode(), "local-offline-fallback")
+            self.assertEqual(
+                health_check()["database"],
+                "local-offline-fallback",
+            )
+
+    def test_supabase_connection_failure_still_fails_without_local_fallback(self):
+        with (
+            patch.object(backend, "DATABASE_URL", "postgresql://unavailable"),
+            patch.object(backend, "LOCAL_FALLBACK_ENABLED", False),
+            patch.object(
+                backend.psycopg,
+                "connect",
+                side_effect=backend.psycopg.OperationalError("database unavailable"),
+            ),
+        ):
+            with self.assertRaises(backend.psycopg.OperationalError):
+                backend.initialize()
+
+    def test_pages_are_served_from_pages_directory(self):
+        self.assertEqual(Path(home_page().path), ROOT / "pages" / "index.html")
+        self.assertEqual(Path(html_page("faq", request()).path), ROOT / "pages" / "faq.html")
+
     def test_password_length_allows_thirty_but_not_thirty_one_characters(self):
         backend.validate_password("A" + "a" * 27 + "@1")
         with self.assertRaises(HTTPException) as rejected:

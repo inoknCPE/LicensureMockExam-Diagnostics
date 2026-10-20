@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import secrets
@@ -13,14 +14,33 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
+import psycopg
+from psycopg.rows import dict_row
+from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("CPEDLE_DB_PATH", ROOT / "data" / "cpedle.sqlite3"))
-QUESTION_BANK_PATH = ROOT / "data" / "questionbank.db"
+load_dotenv(ROOT / ".env")
+DATABASE_URL = os.environ.get("SUPABASE_DB_URL") or os.environ.get("DATABASE_URL")
+LOCAL_FALLBACK_ENABLED = os.environ.get(
+    "CPEDLE_ALLOW_OFFLINE_FALLBACK", ""
+).casefold() in {"1", "true", "yes"}
+USING_OFFLINE_FALLBACK = False
+DB_PATH = Path(os.environ.get(
+    "CPEDLE_DB_PATH", ROOT / "databases" / "account_credential.sqlite3"
+))
+QUESTION_BANK_PATH = ROOT / "databases" / "questionbank.db"
+REQUIRED_DATABASE_TABLES = {
+    "users", "sessions", "password_reset_requests", "questions",
+    "imported_question_overrides", "question_change_requests",
+    "exam_history", "licensure_attempts", "requests",
+    "bank_questions", "bank_choices", "bank_accepted_answers",
+    "bank_domains", "bank_disciplines",
+}
 SESSION_SECONDS = 12 * 60 * 60
 MAX_ATTEMPTS = 3
 SPECIAL = set("!@#$%^&*()_+-=[]{};:'\"\\|,.<>/?`~")
@@ -70,8 +90,70 @@ COGNITIVE_ORDER = ["Remember", "Understand", "Apply", "Analyze"]
 DIFFICULTY_ORDER = ["Easy", "Medium", "Hard"]
 
 
+def _postgres_connection_url(value: str) -> str:
+    parsed = urlsplit(value)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.setdefault("sslmode", "require")
+    return urlunsplit(parsed._replace(query=urlencode(query)))
+
+
+def _postgres_placeholders(query: str) -> str:
+    result = []
+    quote = None
+    index = 0
+    while index < len(query):
+        char = query[index]
+        if quote:
+            result.append(char)
+            if char == quote:
+                if index + 1 < len(query) and query[index + 1] == quote:
+                    result.append(query[index + 1])
+                    index += 1
+                else:
+                    quote = None
+        elif char in {"'", '"'}:
+            quote = char
+            result.append(char)
+        elif char == "?":
+            result.append("%s")
+        else:
+            result.append(char)
+        index += 1
+    return "".join(result)
+
+
+class _PostgresConnection:
+    def __init__(self, connection: psycopg.Connection):
+        self._connection = connection
+
+    def execute(self, query: str, params=()):
+        if query.strip().upper() == "BEGIN IMMEDIATE":
+            query = "BEGIN"
+        try:
+            return self._connection.execute(_postgres_placeholders(query), params)
+        except psycopg.IntegrityError as error:
+            raise sqlite3.IntegrityError(str(error)) from error
+
+    def executemany(self, query: str, params):
+        try:
+            return self._connection.executemany(_postgres_placeholders(query), params)
+        except psycopg.IntegrityError as error:
+            raise sqlite3.IntegrityError(str(error)) from error
+
+    def commit(self) -> None:
+        self._connection.commit()
+
+
 @contextmanager
-def db() -> Iterator[sqlite3.Connection]:
+def db() -> Iterator[sqlite3.Connection | _PostgresConnection]:
+    if DATABASE_URL:
+        with psycopg.connect(
+            _postgres_connection_url(DATABASE_URL),
+            connect_timeout=10,
+            row_factory=dict_row,
+        ) as connection:
+            yield _PostgresConnection(connection)
+        return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(DB_PATH, timeout=10)
     connection.row_factory = sqlite3.Row
@@ -87,8 +169,12 @@ def db() -> Iterator[sqlite3.Connection]:
 
 
 @contextmanager
-def question_bank() -> Iterator[sqlite3.Connection | None]:
-    """Open the team-supplied bank read-only; never mix it with account data."""
+def question_bank() -> Iterator[sqlite3.Connection | _PostgresConnection | None]:
+    """Open the imported bank in PostgreSQL or the local SQLite file read-only."""
+    if DATABASE_URL:
+        with db() as connection:
+            yield connection
+        return
     if not QUESTION_BANK_PATH.is_file():
         yield None
         return
@@ -104,15 +190,24 @@ def imported_questions(include_answers: bool = False) -> list[dict]:
     with question_bank() as bank:
         if bank is None:
             return []
+        tables = (
+            ("bank_questions", "bank_domains", "bank_choices")
+            if DATABASE_URL else ("questions", "domains", "choices")
+        )
+        questions_table, domains_table, choices_table = tables
         rows = bank.execute("""
             SELECT q.id, q.question_text, q.question_type, q.image_path,
                    q.answer_letter, q.answer_text, q.cognitive_level, q.difficulty,
                    d.name AS domain
-            FROM questions q JOIN domains d ON d.id=q.domain_id ORDER BY q.id
-        """).fetchall()
+            FROM {questions_table} q JOIN {domains_table} d ON d.id=q.domain_id ORDER BY q.id
+        """.format(
+            questions_table=questions_table,
+            domains_table=domains_table,
+        )).fetchall()
         choices = {}
         for choice in bank.execute(
-            "SELECT question_id,letter,choice_text,image_path FROM choices ORDER BY question_id,letter"
+            f"SELECT question_id,letter,choice_text,image_path FROM {choices_table} "
+            "ORDER BY question_id,letter"
         ):
             choices.setdefault(choice["question_id"], []).append(choice)
     result = []
@@ -164,6 +259,34 @@ def bank_image_url(path: str | None) -> str | None:
 
 
 def initialize() -> None:
+    global DATABASE_URL, USING_OFFLINE_FALLBACK
+    if DATABASE_URL:
+        try:
+            with db() as connection:
+                rows = connection.execute(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema='public' AND table_type='BASE TABLE'"
+                )
+                existing = {row["table_name"] for row in rows}
+        except psycopg.OperationalError as error:
+            if not LOCAL_FALLBACK_ENABLED:
+                raise
+            logging.warning(
+                "Could not connect to Supabase at startup (%s); using local "
+                "SQLite for this process. Local changes will not sync to Supabase.",
+                error,
+            )
+            DATABASE_URL = None
+            USING_OFFLINE_FALLBACK = True
+        else:
+            missing = REQUIRED_DATABASE_TABLES - existing
+            if missing:
+                raise RuntimeError(
+                    "The Supabase database schema is incomplete. Deploy all project "
+                    "migrations before starting the app. Missing tables: "
+                    + ", ".join(sorted(missing))
+                )
+            return
     with db() as connection:
         connection.executescript("""
             CREATE TABLE IF NOT EXISTS users (
@@ -370,6 +493,12 @@ def initialize() -> None:
                 "INSERT INTO questions(id,q,opts_json,ans,domain,cognitive,difficulty,explanation) VALUES(?,?,?,?,?,?,?,?)",
                 [(item[0], item[1], json.dumps(item[2]), *item[3:]) for item in examples],
             )
+
+
+def database_mode() -> str:
+    if USING_OFFLINE_FALLBACK:
+        return "local-offline-fallback"
+    return "supabase" if DATABASE_URL else "local"
 
 
 def validate_username(value: str) -> str:
@@ -622,20 +751,23 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
     try:
         with db() as connection:
             existing = connection.execute(
-                "SELECT username,email FROM users WHERE username=? OR email=?",
+                "SELECT username,email FROM users "
+                "WHERE lower(username)=lower(?) OR lower(email)=lower(?)",
                 (username, email),
             ).fetchone()
             if existing:
                 field = "Username" if existing["username"].casefold() == username.casefold() else "Email"
                 raise HTTPException(409, f"{field} is already registered.")
             cursor = connection.execute(
-                "INSERT INTO users(username,email,password_hash,role) VALUES(?,?,?,'STUDENT')",
+                "INSERT INTO users(username,email,password_hash,role) "
+                "VALUES(?,?,?,'STUDENT') RETURNING id",
                 (username, email, hash_password(payload.password)),
             )
+            user_id = cursor.fetchone()["id"]
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username or email is already registered.") from None
-    _, csrf = set_session(response, cursor.lastrowid, request.url.scheme == "https")
-    return {"user": {"id": cursor.lastrowid, "username": username, "email": email,
+    _, csrf = set_session(response, user_id, request.url.scheme == "https")
+    return {"user": {"id": user_id, "username": username, "email": email,
                      "role": "STUDENT", "name": "", "discipline": ""}, "csrf": csrf}
 
 
@@ -659,11 +791,13 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
         raise HTTPException(422, "Enter a valid license number (3–50 characters).")
     try:
         with db() as connection:
-            if connection.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
+            if connection.execute("SELECT 1 FROM users WHERE lower(username)=lower(?)",
+                                  (username,)).fetchone():
                 raise HTTPException(409, "Username is already registered.")
-            if connection.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+            if connection.execute("SELECT 1 FROM users WHERE lower(email)=lower(?)",
+                                  (email,)).fetchone():
                 raise HTTPException(409, "Email is already registered.")
-            if connection.execute("SELECT 1 FROM users WHERE license_number=? COLLATE NOCASE",
+            if connection.execute("SELECT 1 FROM users WHERE lower(license_number)=lower(?)",
                                   (license_number,)).fetchone():
                 raise HTTPException(409, "License number is already registered.")
             connection.execute(
@@ -685,7 +819,8 @@ def login(payload: LoginIn, request: Request, response: Response) -> dict:
     with db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
-            "SELECT * FROM users WHERE username=? OR email=?",
+            "SELECT * FROM users WHERE lower(username)=lower(?) OR lower(email)=lower(?)"
+            + (" FOR UPDATE" if DATABASE_URL else ""),
             (identifier, identifier),
         ).fetchone()
         if not row:
@@ -733,7 +868,7 @@ def request_reset(payload: ResetIn, request: Request) -> dict:
     validate_password(payload.password)
     with db() as connection:
         user = connection.execute(
-            "SELECT id FROM users WHERE username=? OR email=?",
+            "SELECT id FROM users WHERE lower(username)=lower(?) OR lower(email)=lower(?)",
             (payload.identifier.strip(), payload.identifier.strip()),
         ).fetchone()
         if user:
@@ -937,10 +1072,10 @@ def queue_question_change(connection: sqlite3.Connection, payload: QuestionIn,
         raise HTTPException(404, "Question not found.")
     cursor = connection.execute(
         "INSERT INTO question_change_requests(proposer_id,action,target_question_id,payload_json) "
-        "VALUES(?,?,?,?)",
+        "VALUES(?,?,?,?) RETURNING id",
         (user_id, action, target_id, payload.model_dump_json()),
     )
-    return {"id": payload.id or target_id, "pending": True, "request_id": cursor.lastrowid}
+    return {"id": payload.id or target_id, "pending": True, "request_id": cursor.fetchone()["id"]}
 
 
 @router.get("/questions/change-requests")
@@ -1146,22 +1281,29 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         numbers = [item[3:] for item in imported_ids]
         if any(not number.isdigit() for number in numbers):
             raise HTTPException(422, "Invalid question ID.")
+        bank_question_table = "bank_questions" if DATABASE_URL else "questions"
+        bank_domain_table = "bank_domains" if DATABASE_URL else "domains"
+        bank_answer_table = "bank_accepted_answers" if DATABASE_URL else "accepted_answers"
+        bank_choice_table = "bank_choices" if DATABASE_URL else "choices"
         with question_bank() as bank:
             if bank is not None:
                 rows = bank.execute(
                     f"""SELECT q.id,q.question_type,q.answer_letter,q.answer_text,q.cognitive_level AS cognitive,
                                q.difficulty,d.name AS domain
-                        FROM questions q JOIN domains d ON d.id=q.domain_id
+                        FROM {bank_question_table} q
+                        JOIN {bank_domain_table} d ON d.id=q.domain_id
                         WHERE q.id IN ({','.join('?' for _ in numbers)})""",
                     numbers,
                 ).fetchall()
                 for row in rows:
                     number = row["id"]
                     answer_rows = bank.execute(
-                        "SELECT answer_norm FROM accepted_answers WHERE question_id=?", (number,)
+                        f"SELECT answer_norm FROM {bank_answer_table} WHERE question_id=?",
+                        (number,),
                     ).fetchall()
                     letters = [item["letter"] for item in bank.execute(
-                        "SELECT letter FROM choices WHERE question_id=? ORDER BY letter", (number,)
+                        f"SELECT letter FROM {bank_choice_table} WHERE question_id=? ORDER BY letter",
+                        (number,),
                     )]
                     lookup[f"QB-{number}"] = {
                         "domain": row["domain"], "cognitive": row["cognitive"],
@@ -1451,7 +1593,9 @@ def start_practice_exam(payload: PracticeAttemptIn,
 
 def owned_attempt(connection: sqlite3.Connection, attempt_id: str, student: dict) -> sqlite3.Row:
     row = connection.execute(
-        "SELECT * FROM licensure_attempts WHERE id=? AND user_id=?", (attempt_id, student["id"])
+        "SELECT * FROM licensure_attempts WHERE id=? AND user_id=?"
+        + (" FOR UPDATE" if DATABASE_URL else ""),
+        (attempt_id, student["id"]),
     ).fetchone()
     if row is None or row["abandoned_at"] is not None:
         raise HTTPException(404, "Exam attempt not found.")
@@ -1494,13 +1638,14 @@ def finalize_timed_attempt(connection: sqlite3.Connection, row: sqlite3.Row,
     now = int(time.time())
     cursor = connection.execute(
         "INSERT INTO exam_history(user_id,title,score_pct,total_items,correct_items,domains_json,report_json) "
-        "VALUES(?,?,?,?,?,?,?)",
+        "VALUES(?,?,?,?,?,?,?) RETURNING id",
         (student["id"], result["title"], result["scorePct"], result["totalItems"],
          result["correctItems"], json.dumps(result["domains"]), json.dumps(report)),
     )
+    result_id = cursor.fetchone()["id"]
     connection.execute("UPDATE licensure_attempts SET submitted_at=?,result_id=? WHERE id=?",
-                       (now, cursor.lastrowid, row["id"]))
-    return {"id": cursor.lastrowid, **result, "expired": now >= row["expires_at"]}
+                       (now, result_id, row["id"]))
+    return {"id": result_id, **result, "expired": now >= row["expires_at"]}
 
 
 def finalize_expired_attempts() -> int:
@@ -1512,7 +1657,9 @@ def finalize_expired_attempts() -> int:
         rows = connection.execute(
             "SELECT * FROM licensure_attempts WHERE result_id IS NULL AND submitted_at IS NULL "
             "AND abandoned_at IS NULL "
-            "AND expires_at<=?", (int(time.time()),)
+            "AND expires_at<=?"
+            + (" FOR UPDATE SKIP LOCKED" if DATABASE_URL else ""),
+            (int(time.time()),),
         ).fetchall()
         for row in rows:
             student = connection.execute("SELECT * FROM users WHERE id=?", (row["user_id"],)).fetchone()
@@ -1663,14 +1810,15 @@ def submit_exam(payload: ExamSubmission, student: dict = Depends(role_required("
             ) else "not_met"
         cursor = connection.execute(
             """INSERT INTO exam_history(user_id,title,score_pct,total_items,correct_items,
-                                        domains_json,report_json) VALUES(?,?,?,?,?,?,?)""",
+                                        domains_json,report_json) VALUES(?,?,?,?,?,?,?) RETURNING id""",
             (student["id"], result["title"], result["scorePct"], result["totalItems"],
              result["correctItems"], json.dumps(result["domains"]), json.dumps(report)),
         )
+        result_id = cursor.fetchone()["id"]
         if payload.mode == "licensure":
             connection.execute("UPDATE licensure_attempts SET submitted_at=? WHERE id=?",
                                (int(time.time()), payload.attempt_id))
-    return {"id": cursor.lastrowid, **result}
+    return {"id": result_id, **result}
 
 
 @router.get("/reports/exams/{exam_id}")

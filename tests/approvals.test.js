@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'admin-question-approvals.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'pages', 'admin-question-approvals.html'), 'utf8');
 const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 
 test('admin approval shows readable pending requests and uses the decision API', async () => {

@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
+const pagesDir = path.join(root, 'pages');
 const source = fs.readFileSync(path.join(root, 'js', 'data.js'), 'utf8');
 const storage = new Map();
 const session = new Map();
@@ -74,7 +75,7 @@ test('guest exams are practice-only and capped at ten questions', () => {
     assert.ok(exam.questions.length <= 10);
     assert.match(exam.title, /Practice Drill/);
     for (const file of ['index.html', 'subjects.html']) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         for (const match of html.matchAll(/<button[^>]*onclick="startMock\('[^']+'\)"[^>]*>/g)) {
             assert.match(match[0], /data-student-only\b[^>]*\bhidden\b/, `${file} hides mock exams from guests`);
         }
@@ -97,15 +98,15 @@ test('admin and examiner cannot generate exams or open retired exam-admin flows'
 });
 
 test('no frontend page still mentions Civil Engineering', () => {
-    for (const file of fs.readdirSync(root).filter(name => name.endsWith('.html'))) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+    for (const file of fs.readdirSync(pagesDir).filter(name => name.endsWith('.html'))) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         assert.doesNotMatch(html, /civil engineering|CELE|NSCP|geotechnical|hydraulics|surveying/i, file);
     }
 });
 
 test('inline page scripts remain valid JavaScript', () => {
-    for (const file of fs.readdirSync(root).filter(name => name.endsWith('.html'))) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+    for (const file of fs.readdirSync(pagesDir).filter(name => name.endsWith('.html'))) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         for (const match of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
             assert.doesNotThrow(() => new vm.Script(match[1], { filename: file }), file);
         }
@@ -113,10 +114,10 @@ test('inline page scripts remain valid JavaScript', () => {
 });
 
 test('local HTML links point to existing pages', () => {
-    for (const file of fs.readdirSync(root).filter(name => name.endsWith('.html'))) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+    for (const file of fs.readdirSync(pagesDir).filter(name => name.endsWith('.html'))) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         for (const [, target] of html.matchAll(/href=["']([^"']+\.html)(?:#[^"']*)?["']/g)) {
-            assert.ok(fs.existsSync(path.join(root, target)), `${file} links to missing ${target}`);
+            assert.ok(fs.existsSync(path.join(pagesDir, target)), `${file} links to missing ${target}`);
         }
     }
 });
@@ -133,7 +134,7 @@ test('every admin page shows the same navigation tabs', () => {
         'admin-reports.html'
     ];
     for (const file of pages) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         const nav = html.match(/<div class="nav__options" id="admin-nav-bar">([\s\S]*?)<\/div>/);
         assert.ok(nav, `${file} has an admin navigation bar`);
         const links = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"/g), match => match[1]);
@@ -142,8 +143,8 @@ test('every admin page shows the same navigation tabs', () => {
 });
 
 test('examiner has a separate question submissions page and navigation tab', () => {
-    const page = fs.readFileSync(path.join(root, 'examiner-question-submissions.html'), 'utf8');
-    const bank = fs.readFileSync(path.join(root, 'test-bank.html'), 'utf8');
+    const page = fs.readFileSync(path.join(pagesDir, 'examiner-question-submissions.html'), 'utf8');
+    const bank = fs.readFileSync(path.join(pagesDir, 'test-bank.html'), 'utf8');
     assert.match(page, /<title>Question Submissions/);
     assert.match(page, /href="examiner-question-submissions\.html" aria-current="page"/);
     assert.match(page, /\/questions\/change-requests/);
@@ -163,7 +164,7 @@ test('guest pages keep the same tabs and highlight their current page', () => {
         'signup.html', 'login.html'
     ];
     for (const file of pages) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         const nav = html.match(/<div class="nav__options"[^>]*>([\s\S]*?)<\/div>/);
         assert.ok(nav, `${file} has a navigation bar`);
         const links = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"/g), match => match[1]);
@@ -171,7 +172,7 @@ test('guest pages keep the same tabs and highlight their current page', () => {
         const active = Array.from(nav[1].matchAll(/<a\b[^>]*href="([^"]+)"[^>]*aria-current="page"/g), match => match[1]);
         assert.deepEqual(active, [expected[pages.indexOf(file)]], `${file} should highlight its own tab`);
     }
-    const home = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const home = fs.readFileSync(path.join(pagesDir, 'index.html'), 'utf8');
     assert.match(home, /id="how-it-works"/);
 });
 
@@ -195,7 +196,7 @@ test('student pages highlight their own tab and navbar hover stays aligned', () 
         ['exam-history.html', 'exam-history.html']
     ];
     for (const [file, target] of pages) {
-        const html = fs.readFileSync(path.join(root, file), 'utf8');
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
         assert.match(html, new RegExp(`href="${target}" aria-current="page"`), file);
     }
     const css = fs.readFileSync(path.join(root, 'css', 'styles.css'), 'utf8');

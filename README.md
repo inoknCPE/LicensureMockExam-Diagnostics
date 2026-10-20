@@ -1,9 +1,24 @@
-# LicensureMockExam-Diagnostics
-A Web-Based Licensure Examination Diagnostic and Mock Testing System with TOS Mapping, Competency Gap Analytics, and Automated Remediation Scheduling
+# Licensure Examination Diagnostic and Mock Testing System
 
-## Local web prototype
+Web-based examination practice with Table of Specifications mapping,
+competency-gap analytics, and remediation scheduling.
 
-This `cpedle-web` branch contains the Computer Engineering frontend and
-localhost backend. Run `setup.bat`, then `create-admin.bat` once, then
-`run.bat`. Open http://127.0.0.1:5000. See [LOCALHOST.md](LOCALHOST.md)
-for roles, password/reset behavior, test commands, and current limitations.
+## Run locally
+
+1. Run `setup.bat`.
+2. Create the initial administrator with `create-admin.bat`.
+3. Start the app with `run.bat` and open http://127.0.0.1:5000.
+
+Set `SUPABASE_DB_URL` in the ignored root `.env` file to use Supabase. Without
+it, the backend uses local SQLite. See [LOCALHOST.md](LOCALHOST.md) for setup,
+database migration, and development details.
+
+## Project layout
+
+- `pages/` — HTML pages
+- `css/`, `js/` — frontend styles and scripts
+- `static/images/` — question-bank images
+- `databases/` — local SQLite fallback and migration sources
+- `scripts/` — database maintenance utilities
+- `supabase/migrations/` — PostgreSQL schema migrations
+- `tests/` — Python and JavaScript tests

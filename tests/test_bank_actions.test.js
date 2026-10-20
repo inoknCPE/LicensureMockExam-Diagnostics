@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'test-bank.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'pages', 'test-bank.html'), 'utf8');
 const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 
 function page(role = 'EXAMINER') {

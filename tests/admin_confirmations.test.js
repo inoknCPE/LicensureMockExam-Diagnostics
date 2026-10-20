@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 const dataSource = fs.readFileSync(path.join(root, 'js', 'data.js'), 'utf8');
 
 function pageScript(file) {
-    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    const html = fs.readFileSync(path.join(root, 'pages', file), 'utf8');
     return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 }
 

@@ -1,10 +1,13 @@
 # Localhost Development Setup
 
-The Computer Engineering frontend is served by FastAPI on localhost. Accounts,
-roles, local question edits, password-reset requests, and student mock results use a local
-SQLite database. The team's 1,200-question bank is read separately from
-`data/questionbank.db`. Guest practice is anonymous and never creates a user
-or saved score.
+The Computer Engineering frontend is served by FastAPI on localhost. When
+`SUPABASE_DB_URL` is set in the root `.env`, accounts, roles, question edits,
+password-reset requests, and student mock results use Supabase PostgreSQL. If
+it is not set, those records use the local SQLite database. When
+`CPEDLE_ALLOW_OFFLINE_FALLBACK=true` is also set, a local app that cannot
+connect to Supabase at startup switches to SQLite for that run. The question
+bank comes from Supabase in cloud mode and from `databases/questionbank.db` in
+local mode. Guest practice is anonymous and never creates a user or saved score.
 
 ## First-time setup
 
@@ -87,6 +90,22 @@ Then open:
 
 Stop the server by pressing `Ctrl+C` in its terminal window.
 
+## Offline mode
+
+For local development, set both `SUPABASE_DB_URL` and
+`CPEDLE_ALLOW_OFFLINE_FALLBACK=true` in the ignored root `.env` file. The app
+uses Supabase when it can connect at startup and otherwise logs that it has
+switched to the local SQLite databases. Check `/api/health`: the `database`
+value is `supabase`, `local`, or `local-offline-fallback`.
+
+The selected database stays in use for the life of that server process. If
+Supabase becomes unavailable after startup, stop and restart the local app to
+select SQLite. Restart again when Supabase is available to return to it.
+Writes made to SQLite while offline are **not** synchronized or merged into
+Supabase; they remain on this computer. This fallback is for local offline use
+only, not for Render. Do not set `CPEDLE_ALLOW_OFFLINE_FALLBACK` on Render,
+whose service filesystem is ephemeral.
+
 ## Current boundary
 
 At this milestone, the server stores password hashes (not passwords) and uses
@@ -96,16 +115,82 @@ request does **not** verify email ownership; the administrator must confirm
 identity outside the app before approval. Email syntax is checked, but no
 verification email is sent.
 
-The accounts/results database is created in `data/cpedle.sqlite3` and is
-ignored by Git. The team's committed `data/questionbank.db` is opened
-read-only; its diagrams are served from `static/images/`. It contains 1,200
-questions across six disciplines and supports five-choice, identification,
-and combined-choice-or-written answers. Imported questions are labeled
-read-only in the administrator/examiner bank view. Locally created questions
-remain editable through the existing administrator approval workflow. The six
+The local accounts/results database is created automatically at
+`databases/account_credential.sqlite3` and is ignored by Git. The committed
+`databases/questionbank.db` fallback is opened read-only; its diagrams are
+served from `static/images/`. It contains 1,200 questions across six
+disciplines and supports five-choice, identification, and
+combined-choice-or-written answers. Imported questions are labeled read-only
+in the administrator/examiner bank view. Locally created questions remain
+editable through the existing administrator approval workflow. The six
 built-in demo questions remain available alongside the imported bank.
 The app does not import accounts or data from the older Tkinter app or browser
 `localStorage`.
+
+## Preparing the application database for Supabase
+
+The Supabase PostgreSQL schema is in
+`supabase/migrations/20261020213000_create_application_schema.sql`. It enables
+RLS and revokes Data API access from `anon` and `authenticated`; the FastAPI
+backend is expected to connect with its private server-side PostgreSQL
+connection string. No policies are defined for direct client access.
+
+After installing the Supabase CLI and creating a Supabase project, link the
+project and deploy the schema:
+
+```powershell
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
+```
+
+Back up both local SQLite databases first. Preview the app and question-bank
+row counts with:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_sqlite_to_supabase.py
+```
+
+The importer refuses to write unless `--apply` is provided and all destination
+application and question-bank tables are empty. It intentionally does not
+copy session records, so users must sign in again after cutover. When applying,
+it securely prompts for the database connection string copied from the
+Supabase dashboard's **Connect** panel. Alternatively, place it in the ignored
+root `.env` file as `SUPABASE_DB_URL=...`; do not commit or share that file.
+Then run:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_sqlite_to_supabase.py --apply
+```
+
+The importer loads the application tables and the question bank into the
+`bank_*` PostgreSQL tables, but skips sessions. Once both Supabase migrations
+are deployed and the import is verified, start the local app with
+`SUPABASE_DB_URL` set in `.env`. The backend will use Supabase instead of the
+local SQLite files. Keep those local files as backups until the remote app has
+been tested thoroughly.
+
+## Deploy to Render
+
+After the app changes are committed and pushed to GitHub, create a Render
+**Web Service** for the repository. Use the repository root as the root
+directory, `pip install -r requirements.txt` as the build command, and:
+
+```text
+uvicorn server:app --host 0.0.0.0 --port $PORT
+```
+
+Set `SUPABASE_DB_URL` in the Render service's environment variables to the
+private PostgreSQL connection string from Supabase's **Connect** panel. Keep
+the value secret; do not use a Supabase anon/publishable key. Deploy the
+migrations and import any needed SQLite data before the first web-service
+deploy. Run `manage.py` locally with the Supabase URL configured if you need to
+create the initial administrator in the cloud database.
+
+Do not set `CPEDLE_ALLOW_OFFLINE_FALLBACK` on Render. The local SQLite fallback
+is only for the local app and Render's filesystem is ephemeral. After deploy,
+check `/api/health`; `database` should be `supabase`. Render's free web service
+can spin down when idle, so its first request after inactivity may be slow.
 
 The frontend's six disciplines and 30 domains are defined in `js/data.js`;
 the backend validates the same taxonomy in `backend.py`. Guest practice

@@ -149,7 +149,7 @@ test('practice generator offers checkboxes only for the architect profile domain
         DISCIPLINES: disciplines, URLSearchParams,
         CpedleDB: { ready: Promise.resolve(), getCurrentUser: () => ({ role: 'STUDENT', discipline: 'Computer Systems Architect' }) }
     });
-    const html = fs.readFileSync(path.join(__dirname, '..', 'generator.html'), 'utf8');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'pages', 'generator.html'), 'utf8');
     const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
     vm.runInContext(scripts.at(-1)[1], pageContext);
     vm.runInContext('updateTosPreview = () => {}', pageContext);

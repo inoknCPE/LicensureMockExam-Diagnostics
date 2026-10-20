@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = file => fs.readFileSync(path.join(root, 'pages', file), 'utf8');
 const script = file => [...read(file).matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 
 test('admin account page separates students and approved examiners without role editing', async () => {

@@ -9,10 +9,17 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from backend import current_session, finalize_expired_attempts, initialize, router
+from backend import (
+    current_session,
+    database_mode,
+    finalize_expired_attempts,
+    initialize,
+    router,
+)
 
 APP_DIR = Path(__file__).resolve().parent
-HTML_PAGES = {page.name for page in APP_DIR.glob("*.html")}
+PAGES_DIR = APP_DIR / "pages"
+HTML_PAGES = {page.name for page in PAGES_DIR.glob("*.html")}
 PAGE_ROLES = {
     "admin-dashboard.html": {"ADMIN"},
     "admin-accounts.html": {"ADMIN"},
@@ -73,13 +80,17 @@ async def prevent_stale_pages(request: Request, call_next):
 
 @app.get("/api/health", tags=["System"])
 def health_check() -> dict[str, str]:
-    """Confirm that the local backend is running."""
-    return {"status": "ok", "service": "licensure-exam-local"}
+    """Confirm that the backend is running and report its active database."""
+    return {
+        "status": "ok",
+        "service": "licensure-exam",
+        "database": database_mode(),
+    }
 
 
 @app.get("/", include_in_schema=False)
 def home_page() -> FileResponse:
-    return FileResponse(APP_DIR / "index.html")
+    return FileResponse(PAGES_DIR / "index.html")
 
 
 @app.get("/{page_name}.html", include_in_schema=False)
@@ -101,7 +112,7 @@ def html_page(page_name: str, request: Request) -> Response:
             raise HTTPException(status_code=403, detail="Your account cannot open this page.")
         if filename == "profile.html" and session[0]["role"] == "ADMIN":
             return RedirectResponse("/admin-dashboard.html", status_code=303)
-    return FileResponse(APP_DIR / filename)
+    return FileResponse(PAGES_DIR / filename)
 
 
 app.mount("/css", StaticFiles(directory=APP_DIR / "css"), name="css")
