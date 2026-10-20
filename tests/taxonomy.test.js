@@ -196,16 +196,42 @@ test('guest pages keep the same tabs and highlight their current page', () => {
 });
 
 test('public navigation reflects the actual server session', () => {
-    const nav = { innerHTML: 'guest tabs' };
+    const nav = { innerHTML: 'guest tabs', hidden: true };
     context.navUnderTest = nav;
     vm.runInContext('renderSessionNavigation(navUnderTest)', context);
     assert.equal(nav.innerHTML, 'guest tabs');
+    assert.equal(nav.hidden, false, 'guest tabs appear after session state is ready');
     vm.runInContext("sessionUser = { role: 'STUDENT' }", context);
+    nav.hidden = true;
     vm.runInContext('renderSessionNavigation(navUnderTest)', context);
+    assert.equal(nav.hidden, false, 'student tabs appear after session state is ready');
     assert.match(nav.innerHTML, /DISCIPLINES/);
     assert.match(nav.innerHTML, /PRACTICE EXAM/);
     assert.match(nav.innerHTML, /LOGOUT/);
     vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
+});
+
+test('public pages hide their guest navigation until session state is ready', () => {
+    for (const [file, navId] of [
+        ['index.html', 'user-nav-options'],
+        ['subjects.html', 'subjects-nav-options'],
+        ['faq.html', 'nav-options-bar']
+    ]) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
+        assert.match(html, new RegExp(`<div class="nav__options" id="${navId}" hidden>`), file);
+        assert.match(html, /await CpedleDB\.ready;[\s\S]*?renderSessionNavigation\(/, file);
+    }
+});
+
+test('Google Fonts load without blocking the first page paint', () => {
+    for (const file of fs.readdirSync(pagesDir).filter(name => name.endsWith('.html'))) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
+        if (!html.includes('fonts.googleapis.com/css2')) continue;
+        assert.match(html, /rel="preconnect" href="https:\/\/fonts\.googleapis\.com"/, file);
+        assert.match(html, /rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin/, file);
+        assert.match(html, /fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" media="print" onload="this\.media='all'; this\.onload=null"/, file);
+        assert.match(html, /<noscript><link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet"><\/noscript>/, file);
+    }
 });
 
 test('student pages highlight their own tab and navbar hover stays aligned', () => {

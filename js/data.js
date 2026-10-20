@@ -342,7 +342,7 @@ function escapeHtml(value) {
 
 // Public pages show the guest menu only when there is no authenticated session.
 function renderSessionNavigation(navBar, activePage = '') {
-    if (!navBar || sessionUser.role === 'GUEST') return;
+    if (!navBar) return;
     const menus = {
         ADMIN: [
             ['admin-dashboard.html', 'OVERVIEW'], ['test-bank.html', 'TEST BANK'],
@@ -361,11 +361,14 @@ function renderSessionNavigation(navBar, activePage = '') {
             ['exam-history.html', 'HISTORY'], ['profile.html', 'PROFILE']
         ]
     };
-    const links = menus[sessionUser.role] || [];
-    if (sessionUser.role === 'ADMIN') navBar.id = 'admin-nav-bar';
-    navBar.innerHTML = links.map(([href, label]) =>
-        `<a class="link" href="${href}"${href === activePage ? ' aria-current="page"' : ''}>${label}</a>`
-    ).join('') + '<button class="link" onclick="CpedleDB.logout()">LOGOUT</button>';
+    if (sessionUser.role !== 'GUEST') {
+        const links = menus[sessionUser.role] || [];
+        if (sessionUser.role === 'ADMIN') navBar.id = 'admin-nav-bar';
+        navBar.innerHTML = links.map(([href, label]) =>
+            `<a class="link" href="${href}"${href === activePage ? ' aria-current="page"' : ''}>${label}</a>`
+        ).join('') + '<button class="link" onclick="CpedleDB.logout()">LOGOUT</button>';
+    }
+    navBar.hidden = false;
 }
 
 function confirmLogout() {
