@@ -371,6 +371,15 @@ function renderSessionNavigation(navBar, activePage = '') {
     navBar.hidden = false;
 }
 
+function getRoleLandingPage(user) {
+    if (user.role === 'ADMIN') return 'admin-dashboard.html';
+    if (user.role === 'EXAMINER') return user.name ? 'examiner-dashboard.html' : 'profile.html';
+    if (user.role === 'STUDENT') {
+        return user.name && user.discipline ? 'examinee-dashboard.html' : 'profile.html';
+    }
+    return 'login.html';
+}
+
 function confirmLogout() {
     return new Promise(resolve => {
         const dialog = document.createElement('dialog');

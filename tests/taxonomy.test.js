@@ -211,6 +211,23 @@ test('public navigation reflects the actual server session', () => {
     vm.runInContext("sessionUser = { role: 'GUEST', name: 'Guest Reviewee' }", context);
 });
 
+test('signed-in users are routed away from the guest login page to their role landing page', () => {
+    const destinations = [
+        ["{ role: 'ADMIN' }", 'admin-dashboard.html'],
+        ["{ role: 'EXAMINER', name: 'Examiner' }", 'examiner-dashboard.html'],
+        ["{ role: 'EXAMINER' }", 'profile.html'],
+        ["{ role: 'STUDENT', name: 'Examinee', discipline: 'Network Engineer' }", 'examinee-dashboard.html'],
+        ["{ role: 'STUDENT', name: 'Examinee' }", 'profile.html'],
+        ["{ role: 'GUEST' }", 'login.html']
+    ];
+    for (const [user, destination] of destinations) {
+        assert.equal(vm.runInContext(`getRoleLandingPage(${user})`, context), destination);
+    }
+    const login = fs.readFileSync(path.join(pagesDir, 'login.html'), 'utf8');
+    assert.match(login, /id="login-nav-options" hidden/);
+    assert.match(login, /await CpedleDB\.ready;[\s\S]*?getRoleLandingPage\(user\)[\s\S]*?renderSessionNavigation\(/);
+});
+
 test('public pages hide their guest navigation until session state is ready', () => {
     for (const [file, navId] of [
         ['index.html', 'user-nav-options'],

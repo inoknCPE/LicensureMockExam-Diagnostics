@@ -32,7 +32,7 @@
                     <span class="sr-only">Toggle Menu</span>
                 </label>
             </div>
-            <div class="nav__options">
+            <div class="nav__options" id="login-nav-options" hidden>
                 <a class="link" href="index.html#how-it-works">HOW IT WORKS</a>
                 <a class="link" href="subjects.html">SUBJECTS</a>
                 <a class="link" href="faq.html">FAQ</a>
@@ -111,6 +111,16 @@
     </footer>
 
     <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const user = CpedleDB.getCurrentUser();
+            if (user.role !== 'GUEST') {
+                window.location.replace(getRoleLandingPage(user));
+                return;
+            }
+            renderSessionNavigation(document.getElementById('login-nav-options'), 'login.html');
+        });
+
         const identifierInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const loginButton = document.getElementById('login-submit');
@@ -131,15 +141,7 @@
 
             const res = await CpedleDB.login(email, pass);
             if (res.success) {
-                if (!res.user.name || (res.user.role === 'STUDENT' && !res.user.discipline)) {
-                    window.location.href = 'profile.html';
-                } else if (res.user.role === 'ADMIN') {
-                    window.location.href = 'admin-dashboard.html';
-                } else if (res.user.role === 'EXAMINER') {
-                    window.location.href = 'examiner-dashboard.html';
-                } else {
-                    window.location.href = 'examinee-dashboard.html';
-                }
+                window.location.href = getRoleLandingPage(res.user);
             } else {
                 errBox.innerText = res.message;
                 errBox.style.display = 'block';
