@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | Admin | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/reports.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__options" id="admin-nav-bar"></div>
+        </div>
+    </nav>
+
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
+    </button>
+
+    <div class="reports-main">
+        <div class="report-toolbar">
+            <h1 class="serif-heading" style="font-size: 2.2rem;">Institutional Performance Reports</h1>
+            <button class="btn-solid-pill" onclick="window.print()">Print / Export PDF</button>
+        </div>
+
+        <div class="print-sheet">
+            <div class="report-heading">
+                <span class="report-kicker">cpedle System Analytics</span>
+                <h1>Domain Proficiency & Exam Outcomes Report</h1>
+            </div>
+
+            <div class="report-section">
+                <h2>System Overview</h2>
+                <div class="report-facts">
+                    <div>
+                        <dt>Total Examinees</dt>
+                        <dd id="rpt-users">-</dd>
+                    </div>
+                    <div>
+                        <dt>Recorded Attempts</dt>
+                        <dd id="rpt-exams">-</dd>
+                    </div>
+                    <div>
+                        <dt>Proficient Attempts (75%+)</dt>
+                        <dd id="rpt-pass">-</dd>
+                    </div>
+                    <div>
+                        <dt>Average Diagnostic Score</dt>
+                        <dd id="rpt-avg">-</dd>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <h2>Domain Performance Breakdown</h2>
+                <div class="report-table-wrap">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Discipline / Domain</th>
+                                <th>Attempts</th>
+                                <th>Avg Score</th>
+                                <th>Proficiency Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rpt-domains-body">
+                            <tr><td colspan="4">Loading performance metrics...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="report-section">
+                <h2>Recorded Examinee Results</h2>
+                <div class="report-table-wrap">
+                    <table class="report-table">
+                        <thead><tr><th>Examinee</th><th>Discipline</th><th>Exam</th><th>Date</th><th>Correct</th><th>Score</th></tr></thead>
+                        <tbody id="rpt-attempts-body"><tr><td colspan="6">Loading results...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['ADMIN']);
+            renderSessionNavigation(document.getElementById('admin-nav-bar'), 'admin-reports.html');
+            loadReportData();
+        });
+
+        async function loadReportData() {
+            try {
+                const [users, roster] = await Promise.all([
+                    apiCall('/admin/users'), apiCall('/admin/reports/roster')
+                ]);
+                const students = users.filter(user => user.role === 'STUDENT');
+                const attempts = roster;
+                const percent = row => Number(row.scorePct) || 0;
+                document.getElementById('rpt-users').textContent = students.length;
+                document.getElementById('rpt-exams').textContent = attempts.length;
+                document.getElementById('rpt-pass').textContent = attempts.length ? Math.round(100 * attempts.filter(row => percent(row) >= 75).length / attempts.length) + '%' : '—';
+                document.getElementById('rpt-avg').textContent = attempts.length ? Math.round(attempts.reduce((sum, row) => sum + percent(row), 0) / attempts.length) + '%' : '—';
+
+                const attemptsBody = document.getElementById('rpt-attempts-body');
+                attemptsBody.innerHTML = attempts.length ? attempts.map(row => `<tr>
+                    <td>${escapeHtml(row.studentName || row.username || '')}<br><small>${escapeHtml(row.username || '')}</small></td>
+                    <td>${escapeHtml(row.discipline || '—')}</td>
+                    <td>${escapeHtml(row.title || '')}</td>
+                    <td>${escapeHtml(row.date || '')}</td>
+                    <td>${Number(row.correctItems) || 0}/${Number(row.totalItems) || 0}</td>
+                    <td>${percent(row)}%</td>
+                </tr>`).join('') : '<tr><td colspan="6">No recorded exam results yet.</td></tr>';
+
+                const domainTotals = new Map();
+                for (const row of attempts) {
+                    for (const domain of row.domains || []) {
+                        if (!domain.name) continue;
+                        const key = `${row.discipline || ''} / ${domain.name}`;
+                        const stat = domainTotals.get(key) || { attempts: 0, correct: 0, total: 0 };
+                        stat.attempts += 1;
+                        stat.correct += Number(domain.correct) || 0;
+                        stat.total += Number(domain.total) || 0;
+                        domainTotals.set(key, stat);
+                    }
+                }
+
+                const body = document.getElementById('rpt-domains-body');
+                if (!domainTotals.size) {
+                    body.innerHTML = '<tr><td colspan="4">No exam analytics recorded yet.</td></tr>';
+                    return;
+                }
+                body.innerHTML = [...domainTotals].map(([name, stat]) => {
+                    const avgScore = stat.total ? Math.round(100 * stat.correct / stat.total) : 0;
+                    return `
+                    <tr>
+                        <td><strong>${escapeHtml(name)}</strong></td>
+                        <td>${stat.attempts}</td>
+                        <td>${avgScore}%</td>
+                        <td><span class="deficiency-tag ${avgScore >= 75 ? 'tag-proficient' : avgScore >= 60 ? 'tag-satisfactory' : 'tag-deficient'}">${avgScore >= 75 ? 'Proficient' : avgScore >= 60 ? 'Satisfactory' : 'Deficient'}</span></td>
+                    </tr>
+                `; }).join('');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('rpt-attempts-body').innerHTML = `<tr><td colspan="6">Could not load recorded results: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

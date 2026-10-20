@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Examinee | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .dash-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 24px; }
+        @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+        .stat-box { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+        .stat-card h3 { font-size: 0.85rem; color: var(--gray-text); font-style: normal; text-transform: uppercase; }
+        .stat-card .val { font-size: 2rem; font-weight: 700; color: var(--navy); }
+    </style>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="examinee-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__options" id="student-nav-bar"></div>
+        </div>
+    </nav>
+
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
+    </button>
+
+    <div class="container section-padding">
+        <h1 class="serif-heading" style="font-size: 2.5rem;">Welcome, <span id="user-name">Examinee</span></h1>
+        <p style="color: var(--gray-text);" id="user-discipline-text">Discipline: Loading...</p>
+
+        <div class="stat-box" style="margin-top: 24px;">
+            <div class="stat-card">
+                <h3>Completed Exams</h3>
+                <div class="val" id="stat-completed">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Score</h3>
+                <div class="val" id="stat-avg">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Deficient Domains</h3>
+                <div class="val" id="stat-deficient" style="color: var(--coral);">0</div>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <div class="card" style="position: relative;">
+                <h2 style="font-size: 1.4rem; margin-bottom: 16px;">Quick Actions</h2>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a class="btn-solid-pill" href="mock-exam.html">Take Mock Licensure Exam</a>
+                    <a class="btn-outline-pill" href="generator.html">Build Practice Exam</a>
+                    <a class="btn-solid-pill coral-btn" href="remediation.html">Open Remediation</a>
+                </div>
+            </div>
+
+            <div class="card" style="position: relative;">
+                <h2 style="font-size: 1.4rem; margin-bottom: 16px;">Recent Performance</h2>
+                <div id="latest-result-box">
+                    <p style="color: var(--gray-text);">No recent exams taken yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('student-nav-bar'), 'examinee-dashboard.html');
+
+            const user = CpedleDB.getCurrentUser();
+            document.getElementById('user-name').textContent = user.name || user.username || 'Examinee';
+            document.getElementById('user-discipline-text').textContent = 'Discipline: ' + (user.discipline || 'Unassigned');
+
+            const history = CpedleDB.getExamHistory();
+            document.getElementById('stat-completed').textContent = history.length;
+            if (history.length) {
+                const avg = Math.round(history.reduce((sum, exam) => sum + (Number(exam.scorePct) || 0), 0) / history.length);
+                document.getElementById('stat-avg').textContent = avg + '%';
+                document.getElementById('stat-deficient').textContent = getRemediationDomains(history).length;
+
+                const latest = history[0];
+                document.getElementById('latest-result-box').innerHTML = `
+                    <div style="font-size: 1.1rem; font-weight: 700;">${escapeHtml(latest.title || 'Practice Exam')}</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--teal);">${Number(latest.scorePct) || 0}%</div>
+                    <div style="font-size: 0.85rem; color: var(--gray-text);">${escapeHtml(latest.date || '')}</div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
