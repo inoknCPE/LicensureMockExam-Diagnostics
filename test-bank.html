@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bank | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .bank-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+        .filter-bar { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 12px; margin-bottom: 24px; background: var(--surface); padding: 16px; border: 1px solid var(--border); border-radius: 12px; }
+        @media (max-width: 850px) { .filter-bar { grid-template-columns: 1fr; } }
+        .bank-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+        .bank-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .bank-table th, .bank-table td { padding: 14px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .bank-table th { background: color-mix(in srgb, var(--teal) 10%, var(--surface)); color: var(--navy); font-weight: 700; }
+        .bank-table tr:last-child td { border-bottom: none; }
+        .key-badge { display: inline-block; font-size: 0.78rem; color: var(--teal); font-weight: 600; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box" id="logo-branding">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span id="logo-text">cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="role-nav-bar"></div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- TEST BANK CONTENT -->
+    <main class="container section-padding">
+        <div class="bank-toolbar">
+            <div>
+                <h1 class="serif-heading" style="font-size: 2.5rem; margin-bottom: 4px;">Computer Engineering Test Bank</h1>
+                <p style="color: var(--gray-text); font-size: 0.95rem;">Curate, filter, and review questions by Bloom's cognitive level and difficulty rating.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-outline-pill" id="btn-import">📁 Bulk Import (JSON)</button>
+                <button class="btn-solid-pill" id="btn-add">+ Add New Item</button>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" id="filter-search" placeholder="Search keywords..." class="form-group" style="margin:0;">
+            <select id="filter-domain" data-taxonomy="domains" data-include-disciplines="true" style="margin:0;">
+                <option value="All">All Domains</option>
+            </select>
+            <select id="filter-diff" style="margin:0;">
+                <option value="All">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+            <select id="filter-cog" style="margin:0;">
+                <option value="All">All Cognitive Levels</option>
+                <option value="Remember">Remember</option>
+                <option value="Understand">Understand</option>
+                <option value="Apply">Apply</option>
+                <option value="Analyze">Analyze</option>
+            </select>
+        </div>
+
+        <div class="bank-table-card">
+            <table class="bank-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Item ID</th>
+                        <th>Question Preview</th>
+                        <th>Domain</th>
+                        <th style="width: 100px;">Cognitive</th>
+                        <th style="width: 100px;">Difficulty</th>
+                        <th style="width: 80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bank-table-body">
+                    <tr><td colspan="6" style="text-align: center; padding: 30px;">Loading question repository...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['EXAMINER', 'ADMIN']);
+            const user = CpedleDB.getCurrentUser();
+
+            // Correct logo text according to logged in role
+            const logoText = document.getElementById('logo-text');
+            const logoBranding = document.getElementById('logo-branding');
+            if (user.role === 'EXAMINER') {
+                logoText.innerHTML = 'cpedle <em>Examiner</em>';
+                logoBranding.href = 'examiner-dashboard.html';
+            } else if (user.role === 'ADMIN') {
+                logoText.innerHTML = 'cpedle <em>Admin</em>';
+                logoBranding.href = 'admin-dashboard.html';
+            }
+
+            renderSessionNavigation(document.getElementById('role-nav-bar'), 'test-bank.html');
+            renderTable();
+
+            document.getElementById('filter-search').addEventListener('input', renderTable);
+            document.getElementById('filter-domain').addEventListener('change', renderTable);
+            document.getElementById('filter-diff').addEventListener('change', renderTable);
+            document.getElementById('filter-cog').addEventListener('change', renderTable);
+        });
+
+        function renderTable() {
+            const body = document.getElementById('bank-table-body');
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const domain = document.getElementById('filter-domain').value;
+            const diff = document.getElementById('filter-diff').value;
+            const cog = document.getElementById('filter-cog').value;
+
+            let questions = CpedleDB.getQuestions();
+
+            if (search) {
+                questions = questions.filter(q => q.q.toLowerCase().includes(search) || (q.id && q.id.toLowerCase().includes(search)));
+            }
+            if (domain !== 'All') {
+                questions = questions.filter(q => q.domain === domain);
+            }
+            if (diff !== 'All') {
+                questions = questions.filter(q => q.difficulty === diff);
+            }
+            if (cog !== 'All') {
+                questions = questions.filter(q => q.cognitive === cog);
+            }
+
+            if (!questions.length) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--gray-text);">No matching questions found in the bank.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = questions.map(q => {
+                const correctOpt = Array.isArray(q.opts) && Number.isInteger(q.ans) ? q.opts[q.ans] : 'N/A';
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(q.id || 'AUTO')}</strong></td>
+                        <td>
+                            <div>${escapeHtml(q.q)}</div>
+                            <span class="key-badge">Key: ${String.fromCharCode(65 + (q.ans || 0))} (${escapeHtml(correctOpt)})</span>
+                        </td>
+                        <td>${escapeHtml(q.domain || '-')}</td>
+                        <td>${escapeHtml(q.cognitive || '-')}</td>
+                        <td><span class="deficiency-tag ${q.difficulty === 'Easy' ? 'tag-proficient' : q.difficulty === 'Medium' ? 'tag-satisfactory' : 'tag-deficient'}">${escapeHtml(q.difficulty || '-')}</span></td>
+                        <td><button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.8rem;">Edit</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

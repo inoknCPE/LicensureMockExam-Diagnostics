@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | cpedle Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="admin-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle Admin</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="admin-nav-bar">
+                <a class="link" href="admin-dashboard.html" style="color: var(--teal); font-weight: 700;">OVERVIEW</a>
+                <a class="link" href="test-bank.html">TEST BANK</a>
+                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
+                <a class="link" href="admin-question-approvals.html">QUESTION APPROVALS</a>
+                <a class="link" href="admin-reports.html">REPORTS</a>
+                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
+        <div class="container">
+            <!-- HEADER BLOCK -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; gap: 20px; flex-wrap: wrap;">
+                <div>
+                    <span style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.8rem; font-weight: 700; color: var(--teal);">ADMINISTRATOR CONTROL CENTER</span>
+                    <h1 class="serif-heading" style="font-size: 2.8rem; margin-top: 4px; line-height: 1.1;">System & Test Bank Health</h1>
+                    <p style="color: var(--gray-text); font-size: 1rem; margin-top: 6px;">Monitor test bank inventory and recorded examinee results.</p>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a href="test-bank.html" class="btn-solid-pill">+ Add Test Item</a>
+                </div>
+            </div>
+
+            <!-- METRIC CARDS -->
+            <div class="feature-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px;">
+                <div class="step-card" style="padding: 28px;">
+                    <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: var(--gray-text);">TEST BANK ITEMS</span>
+                    <div style="font-size: 3.2rem; font-weight: 800; color: var(--teal); margin: 10px 0 4px; line-height: 1;" id="dash-bank-count">0</div>
+                    <a href="test-bank.html" style="font-size: 0.85rem; font-weight: 600; color: var(--teal);">Manage in Test Bank →</a>
+                </div>
+                <div class="step-card" style="padding: 28px;">
+                    <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: var(--gray-text);">COMPLETED SIMULATIONS</span>
+                    <div style="font-size: 3.2rem; font-weight: 800; color: var(--navy); margin: 10px 0 4px; line-height: 1;" id="dash-sim-count">0</div>
+                    <span style="font-size: 0.85rem; color: var(--gray-text);">Recorded across all examinees</span>
+                </div>
+            </div>
+
+            <!-- RECENT TEST BANK ITEMS -->
+            <div>
+                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 16px;">Recent Test Bank Items</h2>
+                <div id="recent-bank-list" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div class="step-card" style="padding: 20px; color: var(--gray-text);">No questions loaded yet.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review • Administrator Portal
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['ADMIN']);
+            
+            const bank = CpedleDB.getQuestions();
+            const history = historyCache || [];
+
+            // Update Metric Counts
+            document.getElementById('dash-bank-count').textContent = bank.length;
+            document.getElementById('dash-sim-count').textContent = history.length;
+
+            // Render Recent Questions
+            const bankList = document.getElementById('recent-bank-list');
+            if (bank.length > 0) {
+                bankList.innerHTML = '';
+                bank.slice(-4).reverse().forEach(q => {
+                    const item = document.createElement('div');
+                    item.className = 'step-card';
+                    item.style.padding = '18px 24px';
+                    item.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <span style="font-size:0.8rem; font-weight:700; color:var(--teal);">${escapeHtml(q.id)}</span>
+                            <span class="badge-diff-${q.difficulty.toLowerCase()}">${escapeHtml(q.difficulty)}</span>
+                        </div>
+                        <p style="font-size:0.9rem; font-weight:600; color:var(--navy); margin-bottom:6px;">${escapeHtml(q.q)}</p>
+                        <span style="font-size:0.8rem; color:var(--gray-text);">${escapeHtml(q.domain)}</span>
+                    `;
+                    bankList.appendChild(item);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

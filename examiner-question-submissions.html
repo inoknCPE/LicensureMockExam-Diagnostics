@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Submissions | Examiner | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .submission-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); margin-top: 24px; }
+        .sub-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .sub-table th, .sub-table td { padding: 14px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .sub-table th { background: color-mix(in srgb, var(--teal) 10%, var(--surface)); color: var(--navy); font-weight: 700; }
+        .sub-table tr:last-child td { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="examiner-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle <em>Examiner</em></span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="examiner-nav-bar"></div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- QUESTION SUBMISSIONS CONTENT -->
+    <main class="container section-padding">
+        <h1 class="serif-heading" style="font-size: 2.5rem; margin-bottom: 6px;">Question Submissions</h1>
+        <p style="color: var(--gray-text); font-size: 0.95rem;">Track the status of items and edits you submitted for administrator review.</p>
+
+        <div class="submission-card">
+            <table class="sub-table">
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th style="width: 140px;">Action</th>
+                        <th style="width: 140px;">Status</th>
+                        <th style="width: 160px;">Submitted</th>
+                    </tr>
+                </thead>
+                <tbody id="submissions-body">
+                    <tr><td colspan="4" style="text-align: center; padding: 30px; color: var(--gray-text);">No question submissions yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['EXAMINER']);
+            renderSessionNavigation(document.getElementById('examiner-nav-bar'), 'examiner-question-submissions.html');
+            loadSubmissions();
+        });
+
+        async function loadSubmissions() {
+            const body = document.getElementById('submissions-body');
+            try {
+                const res = await apiCall('/questions/my-submissions');
+                if (!res || !res.length) return;
+
+                body.innerHTML = res.map(sub => `
+                    <tr>
+                        <td>
+                            <strong>${escapeHtml(sub.q)}</strong>
+                            <div style="font-size: 0.8rem; color: var(--gray-text); margin-top: 2px;">Domain: ${escapeHtml(sub.domain)}</div>
+                        </td>
+                        <td>${escapeHtml(sub.action || 'New Submission')}</td>
+                        <td><span class="deficiency-tag ${sub.status === 'APPROVED' ? 'tag-proficient' : sub.status === 'REJECTED' ? 'tag-deficient' : 'tag-satisfactory'}">${escapeHtml(sub.status || 'PENDING')}</span></td>
+                        <td>${escapeHtml(sub.submittedAt || 'Recently')}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Results | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="subjects.html">DISCIPLINES</a>
+                <a class="link" href="generator.html">PRACTICE EXAM</a>
+                <a class="link" href="mock-exam.html">MOCK EXAM</a>
+                <a class="link" href="exam-history.html">HISTORY</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <section class="section-padding container">
+        <div class="card results-card" style="max-width: 680px;">
+            <h1>Diagnostic Results</h1>
+            <p id="exam-title-display" style="opacity: 0.8; margin-bottom: 25px; font-weight: 500;">Computer Engineering Mock Exam</p>
+            
+            <!-- Animated Score Ring -->
+            <div class="score-ring-wrap" style="width: 150px; margin: 0 auto 20px;">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path id="svg-score-circle" class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text id="svg-score-text" x="18" y="20.35" class="percentage">0%</text>
+                </svg>
+            </div>
+            
+            <div id="overall-badge" class="pass-badge">Calculating...</div>
+            <p id="score-summary" style="font-size: 0.95rem; color: var(--gray-text); margin-bottom: 30px;"></p>
+            
+            <!-- Deficiency Tag Notice -->
+            <div id="deficiency-guide" style="background: rgba(27, 42, 74, 0.04); padding: 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 25px; text-align: left; border-left: 3px solid var(--teal);">
+                <strong>Table of Specifications Deficiency Rating:</strong><br>
+                • <span style="color:var(--coral); font-weight:600;">Deficient</span>: Score &lt; 60% (Remediation Recommended)<br>
+                • <span style="color:#D97706; font-weight:600;">Satisfactory</span>: Score 60% – 74%<br>
+                • <span style="color:var(--teal); font-weight:600;">Proficient</span>: Score 75% – 100%
+            </div>
+
+            <!-- Dynamic Domain Bars with Deficiency Tags -->
+            <div id="report-bars-container" class="report-bars" style="text-align: left; margin-bottom: 35px;">
+                <!-- Populated dynamically -->
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <a id="print-card-link" href="#" class="btn-outline-pill" style="width: 100%;" hidden>Print Performance Card / Save as PDF</a>
+                <a id="btn-remediation" href="remediation.html" class="btn-solid-pill coral-btn" style="width: 100%;">Target Deficient Topics in Remediation →</a>
+                <a id="history-link" href="exam-history.html" class="btn-outline-pill" style="width: 100%;">View Full Exam History & Breakdown</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="faq.html">FAQ & Help</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="subjects.html">CpE Disciplines</a>
+                    <a href="login.html">Examinee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <a href="generator.html">Practice Exam</a>
+                    <a href="exam-history.html">Score Reports</a>
+                    <a href="remediation.html">Remediation Exams</a>
+                    <a href="test-bank.html">Admin Test Bank</a>
+                </div>
+            </div>
+            <div class="footer-programs">
+                <div class="trust-badges small">
+                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-bottom">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                info@cpedle.com
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            const user = CpedleDB.getCurrentUser();
+            const navBar = document.getElementById('nav-options-bar');
+            
+            if (user.role === 'ADMIN') {
+                navBar.innerHTML = `
+                    <a class="link" href="admin-dashboard.html">ADMIN DASHBOARD</a>
+                    <a class="link" href="test-bank.html">TEST BANK</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            } else if (user.role === 'EXAMINER') {
+                navBar.innerHTML = `
+                    <a class="link" href="examiner-dashboard.html">EXAMINER DASHBOARD</a>
+                    <a class="link" href="test-bank.html">QUESTION BANK</a>
+                    <a class="link" href="profile.html">PROFILE</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            } else if (user.role === 'STUDENT') {
+                navBar.innerHTML = `
+                    <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
+                    <a class="link" href="subjects.html">DISCIPLINES</a>
+                    <a class="link" href="generator.html">PRACTICE EXAM</a>
+                    <a class="link" href="mock-exam.html">MOCK EXAM</a>
+                    <a class="link" href="exam-history.html">HISTORY</a>
+                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+                `;
+            }
+
+            const latest = CpedleDB.getLatestResult();
+            if (user.role === 'GUEST') {
+                navBar.innerHTML = '<a class="link" href="index.html#how-it-works">HOW IT WORKS</a>' +
+                    '<a class="link" href="subjects.html">SUBJECTS</a>' +
+                    '<a class="link" href="faq.html">FAQ</a>' +
+                    '<a class="link" href="signup.html">SIGN UP</a>' +
+                    '<a class="link" href="login.html">LOGIN</a>';
+                document.getElementById('history-link').style.display = 'none';
+                document.getElementById('overall-badge').style.display = 'none';
+                document.getElementById('deficiency-guide').style.display = 'none';
+                document.getElementById('report-bars-container').style.display = 'none';
+                const practice = document.getElementById('btn-remediation');
+                practice.textContent = 'Try Another Practice Drill';
+                practice.href = 'subjects.html';
+            }
+
+            if (!latest) {
+                document.getElementById('exam-title-display').innerText = 'No recent exam submitted.';
+                document.getElementById('overall-badge').innerText = 'N/A';
+                return;
+            }
+
+            document.getElementById('exam-title-display').innerText = latest.title;
+            if (user.role === 'STUDENT' && latest.title === 'Mock Licensure Exam') {
+                document.getElementById('btn-remediation').style.display = 'none';
+            }
+            if (user.role === 'STUDENT' && Number.isInteger(latest.id)) {
+                const printLink = document.getElementById('print-card-link');
+                printLink.href = `print-report.html?type=card&id=${latest.id}`;
+                printLink.hidden = false;
+            }
+            document.getElementById('score-summary').innerText = `You scored ${latest.correctItems} out of ${latest.totalItems} items correctly (${latest.scorePct}%).`;
+
+            // Animate SVG Ring
+            const svgCircle = document.getElementById('svg-score-circle');
+            const svgText = document.getElementById('svg-score-text');
+            svgText.textContent = `${latest.scorePct}%`;
+            setTimeout(() => {
+                svgCircle.setAttribute('stroke-dasharray', `${latest.scorePct}, 100`);
+                svgCircle.style.stroke = latest.scorePct >= 75 ? 'var(--teal)' : (latest.scorePct >= 60 ? '#D97706' : 'var(--coral)');
+            }, 100);
+
+            // Badge Setup
+            const badge = document.getElementById('overall-badge');
+            if (latest.scorePct >= 75) {
+                badge.innerText = 'Proficient • PASSED';
+                badge.style.color = 'var(--teal)';
+                badge.style.background = 'rgba(46,196,182,0.1)';
+            } else if (latest.scorePct >= 60) {
+                badge.innerText = 'Satisfactory Progress';
+                badge.style.color = '#D97706';
+                badge.style.background = 'rgba(245, 158, 11, 0.1)';
+            } else {
+                badge.innerText = 'Needs Remediation';
+                badge.style.color = 'var(--coral)';
+                badge.style.background = 'rgba(255, 107, 107, 0.1)';
+            }
+
+            // Populate Breakdown Bars
+            const container = document.getElementById('report-bars-container');
+            container.innerHTML = '';
+            let hasDeficient = false;
+
+            latest.domains.forEach(d => {
+                if (d.tag === 'Deficient') hasDeficient = true;
+
+                let tagClass = 'tag-proficient';
+                let barClass = 'bg-teal';
+                if (d.tag === 'Deficient') {
+                    tagClass = 'tag-deficient';
+                    barClass = 'bg-coral';
+                } else if (d.tag === 'Satisfactory') {
+                    tagClass = 'tag-satisfactory';
+                    barClass = '';
+                }
+
+                const row = document.createElement('div');
+                row.className = 'bar-row';
+                row.style.marginBottom = '12px';
+                row.innerHTML = `
+                    <span class="bar-label" style="font-weight:600; font-size:0.85rem;">${escapeHtml(d.name)}</span>
+                    <div class="bar-track" style="flex:1;">
+                        <div class="bar-fill ${barClass}" style="width: ${d.scorePct}%; ${d.tag === 'Satisfactory' ? 'background-color:#D97706;' : ''}"></div>
+                    </div>
+                    <span class="bar-pct" style="font-weight:700;">${d.scorePct}%</span>
+                    <span class="deficiency-tag ${tagClass}">${d.tag}</span>
+                `;
+                container.appendChild(row);
+            });
+
+            if (!hasDeficient && user.role !== 'GUEST') {
+                const btnRemediation = document.getElementById('btn-remediation');
+                btnRemediation.innerText = 'Start Another Practice Exam';
+                btnRemediation.href = 'generator.html';
+                btnRemediation.className = 'btn-solid-pill';
+            }
+        });
+    </script>
+</body>
+</html>

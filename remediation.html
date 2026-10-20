@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remediation Center | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .remediation-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="examinee-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__options" id="student-nav-bar"></div>
+        </div>
+    </nav>
+
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
+    </button>
+
+    <div class="container section-padding">
+        <h1 class="serif-heading" style="font-size: 2.5rem; margin-bottom: 8px;">Targeted Remediation Queue</h1>
+        <p style="color: var(--gray-text); margin-bottom: 32px;">Domains where your score was below 60% are queued here for 5-question diagnostic focus drills.</p>
+
+        <div id="remediation-list"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('student-nav-bar'), 'remediation.html');
+            loadRemediation();
+        });
+
+        function loadRemediation() {
+            const list = document.getElementById('remediation-list');
+            const history = CpedleDB.getExamHistory();
+            const deficientDomains = new Set();
+
+            history.forEach(exam => {
+                if (exam.domainBreakdown) {
+                    Object.entries(exam.domainBreakdown).forEach(([domain, stats]) => {
+                        const pct = stats.total > 0 ? (stats.correct / stats.total) * 100 : 100;
+                        if (pct < 60) deficientDomains.add(domain);
+                    });
+                }
+            });
+
+            if (!deficientDomains.size) {
+                list.innerHTML = `
+                    <div class="card" style="position:relative; text-align:center; padding: 40px;">
+                        <h2 style="font-size: 1.5rem; margin-bottom: 8px; color: var(--teal);">No Deficiencies Found!</h2>
+                        <p style="color: var(--gray-text);">Great job! None of your evaluated domains are currently flagged for remediation.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = Array.from(deficientDomains).map(domain => `
+                <div class="remediation-card">
+                    <div>
+                        <span class="deficiency-tag tag-deficient">Deficient Topic</span>
+                        <h2 style="font-size: 1.3rem; margin-top: 6px;">${escapeHtml(domain)}</h2>
+                    </div>
+                    <button class="btn-solid-pill coral-btn" onclick="startRemediationDrill('${escapeHtml(domain)}')">Start 5-Q Drill</button>
+                </div>
+            `).join('');
+        }
+
+        function startRemediationDrill(domain) {
+            try {
+                CpedleDB.generateExam({ domain, count: 5, mode: 'remediation', timeMinutes: 10 });
+                window.location.href = 'exam.html';
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    </script>
+</body>
+</html>

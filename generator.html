@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice Exam Builder | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="examinee-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__options" id="student-nav-bar"></div>
+        </div>
+    </nav>
+
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
+    </button>
+
+    <div class="container section-padding">
+        <div style="max-width: 720px; margin: 0 auto;">
+            <h1 class="serif-heading" style="font-size: 2.5rem; margin-bottom: 8px;">Custom Practice Exam Builder</h1>
+            <p style="color: var(--gray-text); margin-bottom: 32px;">Configure target domains, item volume, and difficulty weights for your practice set.</p>
+
+            <form id="generator-form" class="card" style="position: relative;">
+                <fieldset id="gen-domains-fieldset">
+                    <legend>Select Target Domains</legend>
+                    <div id="domain-options" class="practice-domain-list"></div>
+                </fieldset>
+
+                <div class="form-group">
+                    <label for="gen-count">Question Count</label>
+                    <input type="number" id="gen-count" value="10" min="1" max="200" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="gen-time">Time Limit (Minutes)</label>
+                    <input type="number" id="gen-time" value="30" min="5" max="300" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="gen-easy">Easy %</label>
+                        <input type="number" id="gen-easy" value="30" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="gen-med">Medium %</label>
+                        <input type="number" id="gen-med" value="50" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="gen-hard">Hard %</label>
+                        <input type="number" id="gen-hard" value="20" min="0" max="100">
+                    </div>
+                </div>
+
+                <!-- PRESENTABLE PRACTICE EXAM SUMMARY BOX -->
+                <div id="summary-preview" class="tos-preview">
+                    <h2>Practice Exam Configuration Summary</h2>
+                    <p class="tos-preview__summary">Review your custom test plan specifications below before generating items.</p>
+                    <div class="tos-preview__section">
+                        <table class="tos-preview__table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Configuration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Selected Domains</strong></td>
+                                    <td id="sum-domains">Loading...</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Questions</strong></td>
+                                    <td id="sum-count">10 items</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Time Allocated</strong></td>
+                                    <td id="sum-time">30 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Difficulty Mix</strong></td>
+                                    <td id="sum-diff">30% Easy / 50% Medium / 20% Hard</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-solid-pill lg" style="width: 100%;">Generate Practice Exam →</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('student-nav-bar'), 'generator.html');
+
+            const user = CpedleDB.getCurrentUser();
+            const domains = DISCIPLINES[user.discipline] || [];
+            const container = document.getElementById('domain-options');
+
+            container.innerHTML = domains.map(d => `
+                <label class="practice-domain-option">
+                    <input type="checkbox" name="domain" value="${escapeHtml(d)}" checked>
+                    <span>${escapeHtml(d)}</span>
+                </label>
+            `).join('');
+
+            function updateSummary() {
+                const checked = Array.from(document.querySelectorAll('input[name="domain"]:checked')).map(cb => cb.value);
+                const count = document.getElementById('gen-count').value;
+                const time = document.getElementById('gen-time').value;
+                const e = document.getElementById('gen-easy').value;
+                const m = document.getElementById('gen-med').value;
+                const h = document.getElementById('gen-hard').value;
+
+                document.getElementById('sum-domains').textContent = checked.length ? checked.join(', ') : 'None selected';
+                document.getElementById('sum-count').textContent = `${count} questions`;
+                document.getElementById('sum-time').textContent = `${time} minutes`;
+                document.getElementById('sum-diff').textContent = `${e}% Easy / ${m}% Medium / ${h}% Hard`;
+            }
+
+            document.getElementById('generator-form').addEventListener('input', updateSummary);
+            updateSummary();
+
+            document.getElementById('generator-form').addEventListener('submit', (evt) => {
+                evt.preventDefault();
+                const selected = Array.from(document.querySelectorAll('input[name="domain"]:checked')).map(cb => cb.value);
+                const count = parseInt(document.getElementById('gen-count').value, 10);
+                const timeMinutes = parseInt(document.getElementById('gen-time').value, 10);
+                const easyPct = parseInt(document.getElementById('gen-easy').value, 10);
+                const medPct = parseInt(document.getElementById('gen-med').value, 10);
+                const hardPct = parseInt(document.getElementById('gen-hard').value, 10);
+
+                try {
+                    CpedleDB.generateExam({
+                        mode: 'student_practice',
+                        domains: selected,
+                        count,
+                        timeMinutes,
+                        easyPct,
+                        medPct,
+                        hardPct
+                    });
+                    window.location.href = 'exam.html';
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
