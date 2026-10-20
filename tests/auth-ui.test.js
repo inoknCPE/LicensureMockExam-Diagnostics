@@ -18,5 +18,7 @@ test('password checklist matches the registration rules', () => {
     assert.equal(accepts('UPPER123'), false);
     assert.equal(accepts('NoDigits!'), false);
     assert.equal(accepts('Ab@123'), false);
-    assert.equal(accepts('LongPassword@123'), false);
+    assert.equal(accepts('LongPassword@123'), true);
+    assert.equal(accepts('A' + 'a'.repeat(27) + '@1'), true);
+    assert.equal(accepts('A' + 'a'.repeat(28) + '@1'), false);
 });

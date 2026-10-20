@@ -20,7 +20,7 @@ environment's Python executable directly.
 ## Create the first administrator
 
 After setup, run `create-admin.bat` (or `.\.venv\Scripts\python.exe manage.py`).
-Enter an 8–30 character username, valid email format, and an 8–12 character
+Enter an 8–30 character username, valid email format, and an 8–30 character
 password containing a letter, uppercase letter, number, and special character.
 This local-only command works once. Public registration always creates a
 Student account; the administrator can assign Examiner or Admin roles from
@@ -49,6 +49,14 @@ selected domains and adjusts difficulty when the bank cannot meet the target.
 Student practice results are saved in exam history but excluded from the admin
 mock-exam roster. Guest practice drills remain limited to 10 questions and are
 not saved.
+
+Both the fixed Mock Licensure Exam and student-created Practice Exam now start
+as server-tracked attempts. The server issues the deadline and stores answers
+as the student works. At expiry, a background check finalizes the attempt from
+answers already saved on the server, including if the browser was closed;
+answers arriving after the deadline do not count. Exiting an exam before its
+deadline discards the attempt and records no score. Guest drills remain
+browser-only and are not part of this timed-attempt flow.
 
 Students can print an individual diagnostic performance card from Results or
 from any attempt in Exam History. The administrator's Reports tab provides a

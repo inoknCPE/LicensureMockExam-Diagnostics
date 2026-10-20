@@ -48,6 +48,7 @@
             error.textContent = '';
             try {
                 await CpedleDB.ready;
+                if (CpedleDB.getActiveExam()) await CpedleDB.discardActiveExam();
                 await CpedleDB.startLicensureExam();
                 window.location.href = 'exam.html';
             } catch (problem) {

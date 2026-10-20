@@ -16,6 +16,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = isGuest ? 'subjects.html' : 'generator.html';
         return;
     }
+    if (activeExam.mode === 'student_practice' && !activeExam.attemptId && CpedleDB.syncActiveExam) {
+        await CpedleDB.discardActiveExam();
+        alert('This older practice exam has no server timer. Please generate it again.');
+        window.location.href = 'generator.html';
+        return;
+    }
+    if (activeExam.attemptId && CpedleDB.syncActiveExam) {
+        try {
+            const status = await CpedleDB.syncActiveExam();
+            if (status?.resultId) {
+                window.location.href = 'results.html';
+                return;
+            }
+            activeExam = CpedleDB.getActiveExam();
+        } catch (error) {
+            alert('Could not restore the timed exam: ' + error.message);
+            return;
+        }
+    }
     if (isGuest) document.title = 'Practice Drill | cpedle';
 
     const questions = activeExam.questions;
@@ -38,7 +57,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Initialize or read existing timer
-    if (activeExam.mode === 'licensure' && activeExam.startedAt) {
+    if (activeExam.expiresAt) {
+        activeExam.remainingSeconds = Math.max(0, Math.ceil(activeExam.expiresAt -
+            (Date.now() / 1000 + (activeExam.serverClockOffset || 0))));
+    } else if (activeExam.mode === 'licensure' && activeExam.startedAt) {
         activeExam.remainingSeconds = Math.max(0, activeExam.timeSeconds -
             (Math.floor(Date.now() / 1000) - activeExam.startedAt));
     } else if (!activeExam.remainingSeconds && activeExam.remainingSeconds !== 0) {
@@ -173,6 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let submitting = false;
     let exitDialog = null;
+    let unansweredDialog = null;
     let tabWarningDialog = null;
     let examTabWasHidden = false;
     if (activeExam.mode === 'licensure') {
@@ -231,31 +254,112 @@ document.addEventListener('DOMContentLoaded', async () => {
             dialog.remove();
             exitDialog = null;
             if (!confirmed || submitting) return;
-            clearInterval(timerInterval);
-            CpedleDB.discardActiveExam();
-            window.location.href = activeExam.mode === 'licensure' ? 'mock-exam.html'
-                : isGuest ? 'subjects.html' : 'generator.html';
+            (async () => {
+                try {
+                    await CpedleDB.discardActiveExam();
+                    clearInterval(timerInterval);
+                    window.location.href = activeExam.mode === 'licensure' ? 'mock-exam.html'
+                        : isGuest ? 'subjects.html' : 'generator.html';
+                } catch (error) {
+                    alert(error.message);
+                    if (/time expired/i.test(error.message)) {
+                        clearInterval(timerInterval);
+                        try {
+                            await CpedleDB.finalizeExam();
+                            window.location.href = 'results.html';
+                        } catch (submitError) {
+                            alert('Your exam time expired, but results could not load: ' + submitError.message);
+                        }
+                    }
+                }
+            })();
         }, { once: true });
         document.body.appendChild(dialog);
         dialog.showModal();
         dialog.querySelector('.logout-dialog__cancel').focus();
     });
-    async function submitExam(force = false) {
+    function showTimeExpiredDialog() {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'logout-dialog time-expired-dialog';
+        dialog.setAttribute('aria-labelledby', 'time-expired-title');
+        dialog.addEventListener('cancel', event => event.preventDefault());
+        dialog.innerHTML = `
+            <div class="logout-dialog__card">
+                <svg class="logout-dialog__icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                    <circle cx="40" cy="40" r="30" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M40 20v22l14 9" stroke="#FF8F95" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p id="time-expired-title"><strong>Time has expired, submitting your answers</strong></p>
+                <p><strong>Proverbs 3:5-6</strong> - <em>"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."</em></p>
+                <p id="time-expired-status" role="status">Submitting your answers...</p>
+                <button type="button" class="logout-dialog__confirm" disabled>View Results</button>
+            </div>`;
+        const button = dialog.querySelector('button');
+        const status = dialog.querySelector('#time-expired-status');
+        let submitted = false;
+        button.addEventListener('click', () => {
+            if (submitted) window.location.href = 'results.html';
+            else submitExam(true, complete);
+        });
+        function complete(error) {
+            submitted = !error;
+            status.textContent = error ? `Submission failed: ${error.message}. Please try again.` : 'Your answers have been submitted.';
+            button.textContent = error ? 'Retry Submission' : 'View Results';
+            button.disabled = false;
+            button.focus();
+        }
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        submitExam(true, complete);
+    }
+
+    function confirmUnansweredSubmission(unanswered) {
+        if (unansweredDialog) return Promise.resolve(false);
+        return new Promise(resolve => {
+            const dialog = document.createElement('dialog');
+            unansweredDialog = dialog;
+            dialog.className = 'logout-dialog';
+            dialog.setAttribute('aria-labelledby', 'unanswered-exam-title');
+            dialog.innerHTML = `
+                <form method="dialog" class="logout-dialog__card">
+                    <svg class="logout-dialog__icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                        <circle cx="40" cy="40" r="30" stroke="currentColor" stroke-width="2.5"/>
+                        <path d="M40 22v24m0 10v2" stroke="#FF8F95" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                    <p id="unanswered-exam-title">You still have unanswered questions, are you sure you want to submit the exam?</p>
+                    <p>${unanswered} question${unanswered === 1 ? '' : 's'} unanswered.</p>
+                    <button type="submit" value="cancel" class="logout-dialog__cancel">No, Continue Exam</button>
+                    <button type="submit" value="confirm" class="logout-dialog__confirm">Yes, Submit Exam</button>
+                </form>`;
+            dialog.addEventListener('close', () => {
+                const confirmed = dialog.returnValue === 'confirm';
+                dialog.remove();
+                unansweredDialog = null;
+                resolve(confirmed);
+            }, { once: true });
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            dialog.querySelector('.logout-dialog__cancel').focus();
+        });
+    }
+
+    async function submitExam(force = false, onComplete = null) {
         if (submitting) return;
         const unanswered = questions.filter(q => q.userAns === null || q.userAns === undefined || q.userAns === '').length;
         if (!force && unanswered > 0) {
-            const proceed = confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to finish and submit?`);
-            if (!proceed) return;
+            if (!await confirmUnansweredSubmission(unanswered) || submitting || activeExam.remainingSeconds <= 0) return;
         }
         
         // Finalize score in storage
         submitting = true;
         try {
             await CpedleDB.finalizeExam();
-            window.location.href = 'results.html';
+            if (onComplete) onComplete(null);
+            else window.location.href = 'results.html';
         } catch (error) {
             submitting = false;
-            alert(error.message);
+            if (onComplete) onComplete(error);
+            else alert(error.message);
         }
     }
 
@@ -297,17 +401,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Timer Loop
     const timerInterval = setInterval(async () => {
-        activeExam.remainingSeconds = activeExam.mode === 'licensure' && activeExam.startedAt
+        activeExam.remainingSeconds = activeExam.expiresAt
+            ? Math.max(0, Math.ceil(activeExam.expiresAt -
+                (Date.now() / 1000 + (activeExam.serverClockOffset || 0))))
+            : activeExam.mode === 'licensure' && activeExam.startedAt
             ? Math.max(0, activeExam.timeSeconds - (Math.floor(Date.now() / 1000) - activeExam.startedAt))
             : activeExam.remainingSeconds - 1;
         CpedleDB.saveActiveExamState(activeExam);
 
         if (activeExam.remainingSeconds <= 0) {
+            if (submitting) return;
             clearInterval(timerInterval);
             if (exitDialog) exitDialog.close('cancel');
+            if (unansweredDialog) unansweredDialog.close('cancel');
             if (tabWarningDialog) tabWarningDialog.close();
-            alert('Time has expired! Submitting your answers automatically.');
-            await submitExam(true);
+            if (elTimer) elTimer.textContent = '00:00:00';
+            showTimeExpiredDialog();
             return;
         }
 

@@ -2,114 +2,201 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Your Profile | cpedle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
+    <script src="js/auth-ui.js"></script>
+    <script src="js/theme-toggle.js"></script>
 </head>
 <body>
-    <nav class="new-nav"><div class="nav__content">
-        <a class="nav-logo-box" href="index.html"><span>cpedle</span></a>
-        <div class="nav__control">
-            <input type="checkbox" id="menu" class="sr-only">
-            <label for="menu"><span class="sr-only">Toggle Menu</span>
-                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box" id="profile-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
                 </svg>
-            </label>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="user-nav-options"></div>
         </div>
-        <div class="nav__options" id="profile-nav-bar"><button class="link" onclick="CpedleDB.logout()">LOGOUT</button></div>
-    </div></nav>
-    <div class="auth-wrapper"><div class="card auth-card">
-        <h1>Personalize Your Profile</h1>
-        <p id="profile-description" class="text-center" style="color:var(--gray-text); margin-bottom:20px;">Your role is assigned by the system or administrator. Choose your Computer Engineering discipline.</p>
-        <form id="profile-form">
-            <div class="form-group"><label for="profile-name">Full name</label>
-                <input id="profile-name" type="text" minlength="2" maxlength="100" required autocomplete="name"></div>
-            <div class="form-group"><label for="profile-role">Access role</label>
-                <input id="profile-role" type="text" readonly></div>
-            <div id="discipline-group" class="form-group"><label for="profile-discipline">Discipline</label>
-                <select id="profile-discipline" required><option value="">Select your discipline</option></select></div>
-            <div id="professional-title-group" class="form-group" hidden><label for="profile-professional-title">Professional title</label>
-                <input id="profile-professional-title" type="text" readonly></div>
-            <p id="profile-error" role="alert" style="color:var(--coral)"></p>
-            <button class="btn-solid-pill" type="submit">Save Profile</button>
-        </form>
-        <hr class="footer-divider" style="margin:24px 0">
-        <h2 style="font-size:1.2rem">Sign-in email</h2>
-        <p style="color:var(--gray-text)">Use the saved address below to log in. To correct it, confirm your current password. Email ownership is not yet verified.</p>
-        <form id="email-form">
-            <div class="form-group"><label for="profile-email">Email address</label>
-                <input id="profile-email" type="email" required autocomplete="email"></div>
-            <div class="form-group"><label for="profile-current-password">Current password</label>
-                <input id="profile-current-password" type="password" required autocomplete="current-password"></div>
-            <p id="email-error" role="alert" style="color:var(--coral)"></p>
-            <button class="btn-outline-pill" type="submit">Update Email</button>
-        </form>
-    </div></div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- PROFILE FORM SECTION -->
+    <main class="auth-wrapper">
+        <div class="auth-card card" style="position: relative;">
+            <h1 class="serif-heading" style="font-size: 2.2rem; text-align: center; margin-bottom: 8px;">Personalize Your Profile</h1>
+            <p style="text-align: center; color: var(--gray-text); font-size: 0.9rem; margin-bottom: 24px;">Update your name and review your account details.</p>
+
+            <form id="profile-form">
+                <div class="form-group">
+                    <label for="prof-name">Full name</label>
+                    <input type="text" id="prof-name" required placeholder="Your full name">
+                </div>
+
+                <div class="form-group">
+                    <label for="prof-email">Email</label>
+                    <input type="email" id="prof-email" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="prof-role">Access Role</label>
+                    <input type="text" id="prof-role" readonly>
+                </div>
+
+                <div class="form-group" id="student-discipline-field" hidden>
+                    <label for="prof-discipline-display">Discipline</label>
+                    <input type="text" id="prof-discipline-display" readonly>
+                </div>
+                <div class="form-group" id="student-discipline-setup" hidden>
+                    <label for="prof-discipline">Choose your discipline</label>
+                    <select id="prof-discipline"><option value="" disabled selected>Select your discipline</option></select>
+                    <small>This first-time selection cannot be changed later.</small>
+                </div>
+                <div class="form-group" id="examiner-title-field" hidden>
+                    <label for="prof-title">License Title</label>
+                    <input type="text" id="prof-title" readonly>
+                </div>
+                <div class="form-group" id="examiner-license-field" hidden>
+                    <label for="prof-license">License Number</label>
+                    <input type="text" id="prof-license" readonly>
+                </div>
+
+                <button type="submit" class="btn-solid-pill" style="width: 100%; margin-top: 10px;">Save Profile</button>
+            </form>
+
+            <hr style="margin: 28px 0; border: 0; border-top: 1px solid var(--border);">
+
+            <form id="password-form">
+                <h2 class="serif-heading" style="font-size: 1.3rem; margin-bottom: 6px;">Change Password</h2>
+                <p style="color: var(--gray-text); font-size: 0.85rem; margin-bottom: 16px;">Enter your current password and choose a new one.</p>
+
+                <div class="form-group">
+                    <label for="prof-current-password">Current Password</label>
+                    <input type="password" id="prof-current-password" required autocomplete="current-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="prof-new-password">New Password <span class="password-help"><button type="button" class="password-help-trigger" aria-label="Password requirements">?</button><span class="password-tooltip" role="tooltip"></span></span></label>
+                    <input type="password" id="prof-new-password" required minlength="8" maxlength="30" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="prof-confirm-password">Confirm New Password</label>
+                    <input type="password" id="prof-confirm-password" required minlength="8" maxlength="30" autocomplete="new-password">
+                </div>
+                <label class="show-password"><input type="checkbox" id="prof-show-passwords"> Show new passwords</label>
+                <button type="submit" id="prof-change-password" class="btn-outline-pill" style="width: 100%; margin-top: 10px;" disabled>Change Password</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
     <script>
+        function profileHomeForRole(role) {
+            return {
+                STUDENT: 'examinee-dashboard.html',
+                EXAMINER: 'examiner-dashboard.html',
+                ADMIN: 'admin-dashboard.html'
+            }[role] || 'index.html';
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
-            await CpedleDB.ready;
-            const user = CpedleDB.getCurrentUser();
-            if (user.role === 'EXAMINER') {
-                renderSessionNavigation(document.getElementById('profile-nav-bar'), 'profile.html');
-            }
-            if (user.role === 'GUEST') {
-                window.location.href = 'login.html';
-                return;
-            }
-            document.getElementById('profile-name').value = user.name || '';
-            document.getElementById('profile-role').value = user.role;
-            document.getElementById('profile-email').value = user.email || '';
-            const select = document.getElementById('profile-discipline');
-            if (user.role === 'ADMIN') {
-                document.getElementById('discipline-group').style.display = 'none';
-                document.getElementById('profile-description').textContent =
-                    'Administrators manage accounts and system access; no exam discipline is required.';
-                select.required = false;
-            } else if (user.role === 'EXAMINER') {
-                document.getElementById('discipline-group').hidden = true;
-                document.getElementById('professional-title-group').hidden = false;
-                document.getElementById('profile-professional-title').value = user.professionalTitle || '';
-                document.getElementById('profile-description').textContent =
-                    'Your professional title was provided with your approved examiner application.';
-                select.required = false;
-            }
-            Object.keys(DISCIPLINES).forEach(discipline => {
-                const option = document.createElement('option');
-                option.value = option.textContent = discipline;
-                select.appendChild(option);
+            await enforceRoleGuard(['STUDENT', 'EXAMINER', 'ADMIN']);
+            const passwordChecklist = setupPasswordForm({
+                passwordId: 'prof-new-password', confirmId: 'prof-confirm-password',
+                showId: 'prof-show-passwords', buttonId: 'prof-change-password'
             });
-            select.value = user.discipline || '';
-        });
-        document.getElementById('profile-form').addEventListener('submit', async event => {
-            event.preventDefault();
-            try {
-                const user = await CpedleDB.saveProfile(
-                    document.getElementById('profile-name').value.trim(),
-                    document.getElementById('profile-discipline').value
-                );
-                window.location.href = user.role === 'ADMIN' ? 'admin-dashboard.html' :
-                    user.role === 'EXAMINER' ? 'examiner-dashboard.html' : 'examinee-dashboard.html';
-            } catch (error) {
-                document.getElementById('profile-error').textContent = error.message;
+            renderSessionNavigation(document.getElementById('user-nav-options'), 'profile.html');
+
+            const user = CpedleDB.getCurrentUser();
+            document.getElementById('profile-logo').href = profileHomeForRole(user.role);
+
+            // Students choose a discipline once during first-time setup.
+            const discSelect = document.getElementById('prof-discipline');
+            Object.keys(DISCIPLINES).forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                discSelect.appendChild(opt);
+            });
+
+            // Populate current values
+            document.getElementById('prof-name').value = user.name || '';
+            document.getElementById('prof-role').value = user.role === 'STUDENT' ? 'Student / Examinee' : user.role === 'EXAMINER' ? 'Examiner' : 'Admin';
+            document.getElementById('prof-email').value = user.email || '';
+            if (user.role === 'STUDENT') {
+                const assigned = Boolean(user.discipline);
+                document.getElementById(assigned ? 'student-discipline-field' : 'student-discipline-setup').hidden = false;
+                document.getElementById('prof-discipline-display').value = user.discipline || '';
+                if (!assigned) discSelect.required = true;
+            } else if (user.role === 'EXAMINER') {
+                document.getElementById('examiner-title-field').hidden = false;
+                document.getElementById('examiner-license-field').hidden = false;
+                document.getElementById('prof-title').value = user.professionalTitle || '';
+                document.getElementById('prof-license').value = user.licenseNumber || '';
             }
-        });
-        document.getElementById('email-form').addEventListener('submit', async event => {
-            event.preventDefault();
-            const message = document.getElementById('email-error');
-            try {
-                const user = await CpedleDB.changeOwnEmail(
-                    document.getElementById('profile-email').value.trim(),
-                    document.getElementById('profile-current-password').value
-                );
-                document.getElementById('profile-current-password').value = '';
-                message.style.color = '#16803d';
-                message.textContent = `Email updated to ${user.email}. You can use it on your next login.`;
-            } catch (error) {
-                message.style.color = 'var(--coral)';
-                message.textContent = error.message;
-            }
+
+            // Save profile details
+            document.getElementById('profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('prof-name').value.trim();
+                const discipline = user.role === 'STUDENT' ? (user.discipline || discSelect.value) : '';
+                try {
+                    await CpedleDB.saveProfile(name, discipline);
+                    alert('Profile updated successfully!');
+                    location.reload();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            document.getElementById('password-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const current = document.getElementById('prof-current-password').value;
+                const next = document.getElementById('prof-new-password').value;
+                const confirm = document.getElementById('prof-confirm-password').value;
+                try {
+                    await CpedleDB.changeOwnPassword(current, next, confirm);
+                    document.getElementById('password-form').reset();
+                    document.getElementById('prof-new-password').type = 'password';
+                    document.getElementById('prof-confirm-password').type = 'password';
+                    passwordChecklist.refresh();
+                    alert('Password changed successfully.');
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
         });
     </script>
 </body>

@@ -7,22 +7,9 @@ const vm = require('node:vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'admin-question-approvals.html'), 'utf8');
 const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 
-function node(tag) {
-    return {
-        tag, children: [], textContent: '', className: '', style: {},
-        appendChild(child) { this.children.push(child); },
-        replaceChildren() { this.children = []; },
-        addEventListener() {}
-    };
-}
-
-function walk(root) {
-    return [root, ...root.children.flatMap(walk)];
-}
-
-test('admin approval renders a readable question instead of raw JSON', async () => {
-    const list = node('div');
-    const message = node('p');
+test('admin approval shows readable pending requests and uses the decision API', async () => {
+    const list = { innerHTML: '' };
+    const calls = [];
     const question = {
         id: 'CPE-TEST', q: 'What is the full form of OSI?',
         opts: ['Optical Service Implementation', 'Open Service Internet',
@@ -31,26 +18,41 @@ test('admin approval renders a readable question instead of raw JSON', async () 
         difficulty: 'Easy', explanation: 'The OSI reference model.'
     };
     const context = vm.createContext({
-        document: {
-            createElement: node,
-            createTextNode: text => ({ tag: '#text', textContent: text, children: [] }),
-            getElementById: id => id === 'question-approval-list' ? list : message,
-            addEventListener() {}
+        document: { getElementById: () => list, addEventListener() {} },
+        apiCall: async (url, options) => {
+            calls.push([url, options]);
+            return url === '/questions/change-requests'
+                ? [{ id: 7, action: 'ADD', question, proposer: 'Examiner09' }] : { ok: true };
         },
-        apiCall: async () => [{ id: 1, action: 'ADD', question,
-            proposer: 'Examiner09', submitted_at: '2026-10-19 15:27:48' }],
-        CpedleDB: { getQuestions: () => [] },
+        escapeHtml: value => String(value ?? ''),
+        confirmActionDialog: async () => true,
+        alert: () => {},
         console
     });
     vm.runInContext(script, context);
-    await vm.runInContext('loadQuestionApprovals()', context);
-    const elements = walk(list);
-    assert.equal(elements.filter(item => item.tag === 'pre').length, 0);
-    assert.ok(elements.some(item => item.textContent === question.q));
-    assert.ok(elements.some(item => item.textContent === 'C.'));
-    assert.ok(elements.some(item => item.textContent === '✓ Correct answer'));
-    assert.ok(elements.some(item => item.textContent === 'Domain: Networking Fundamentals'));
-    assert.ok(elements.some(item => item.textContent === 'Explanation: The OSI reference model.'));
-    assert.deepEqual(elements.filter(item => item.tag === 'button').map(item => item.textContent),
-        ['Approve', 'Reject']);
+    await vm.runInContext('loadApprovals()', context);
+    assert.match(list.innerHTML, /What is the full form of OSI\?/);
+    assert.match(list.innerHTML, /C\. Open System Interconnection/);
+    assert.match(list.innerHTML, /Explanation:<\/strong> The OSI reference model/);
+    assert.match(list.innerHTML, /Submitted by Examiner09/);
+    assert.doesNotMatch(list.innerHTML, /<pre>|payload_json/);
+    await vm.runInContext('decideQuestion(7, true)', context);
+    assert.equal(calls[1][0], '/admin/questions/change-requests/7/decision');
+    assert.equal(calls[1][1].method, 'POST');
+    assert.equal(JSON.parse(calls[1][1].body).approve, true);
+});
+
+test('admin sees the impact of a deletion request before approving it', async () => {
+    const list = { innerHTML: '' };
+    const context = vm.createContext({
+        document: { getElementById: () => list, addEventListener() {} },
+        apiCall: async () => [{ id: 8, action: 'DELETE', proposer: 'Examiner09',
+            question: { q: 'Old question', opts: ['A', 'B', 'C', 'D'], ans: 0,
+                domain: 'Networking Fundamentals', cognitive: 'Remember', difficulty: 'Easy' } }],
+        escapeHtml: value => String(value ?? ''), console
+    });
+    vm.runInContext(script, context);
+    await vm.runInContext('loadApprovals()', context);
+    assert.match(list.innerHTML, /DELETE request/);
+    assert.match(list.innerHTML, /remove the question from the live bank/);
 });

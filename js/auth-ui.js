@@ -1,6 +1,6 @@
 // Client-side feedback mirrors the server rules; the server remains authoritative.
 const PASSWORD_RULES = [
-    ['8–12 characters', value => value.length >= 8 && value.length <= 12],
+    ['8–30 characters', value => value.length >= 8 && value.length <= 30],
     ['At least one letter (A–Z or a–z)', value => /[A-Za-z]/.test(value)],
     ['At least one uppercase letter', value => /[A-Z]/.test(value)],
     ['At least one number', value => /[0-9]/.test(value)],
@@ -39,4 +39,5 @@ function setupPasswordForm({ passwordId, confirmId, usernameId, emailId, showId,
         confirm.type = show.checked ? 'text' : 'password';
     });
     refresh();
+    return { refresh };
 }

@@ -99,7 +99,7 @@
         <div class="container">
             <!-- HEADER BLOCK -->
             <div class="admin-page-header">
-                <h1 class="serif-heading">Accounts, Roles & Locked Users</h1>
+                <h1 class="serif-heading">Accounts & Locked Users</h1>
                 <p>Student accounts register immediately. Examiner applications require your approval before the applicant can sign in.</p>
             </div>
 
@@ -114,24 +114,37 @@
                 </div>
             </div>
 
-            <!-- ACCOUNTS TABLE -->
-            <h2 class="serif-heading admin-section-title">Registered Accounts</h2>
+            <h2 class="serif-heading admin-section-title">Registered Students</h2>
             <div class="table-card-wrapper">
                 <div class="table-responsive" style="margin-top: 0;">
                     <table class="cpedle-table">
                         <thead>
                             <tr>
+                                <th>Full Name</th>
                                 <th>Username</th>
                                 <th>Email</th>
-                                <th>Name</th>
-                                <th style="width: 150px;">Role</th>
+                                <th>Role</th>
                                 <th style="width: 120px;">Status</th>
                                 <th style="width: 120px; text-align: right;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="users-tbody">
-                            <!-- Rendered dynamically -->
-                        </tbody>
+                        <tbody id="students-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="serif-heading admin-section-title">Registered Examiners</h2>
+            <div class="table-card-wrapper">
+                <div class="table-responsive" style="margin-top: 0;">
+                    <table class="cpedle-table">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th><th>Username</th><th>Email</th>
+                                <th>License Title</th><th>License Number</th>
+                                <th>Status</th><th style="text-align:right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examiners-tbody"></tbody>
                     </table>
                 </div>
             </div>
@@ -177,12 +190,14 @@
             let pendingResets = [];
             let examinerApplications = [];
             let applicationsLoadError = false;
+            let resetsLoadError = false;
 
             try {
                 users = await apiCall('/admin/users');
             } catch (e) {
-                document.getElementById('users-tbody').innerHTML =
-                    `<tr><td colspan="6">Unable to load accounts: ${escapeHtml(e.message)}</td></tr>`;
+                const error = `<tr><td colspan="6">Unable to load accounts: ${escapeHtml(e.message)}</td></tr>`;
+                document.getElementById('students-tbody').innerHTML = error;
+                document.getElementById('examiners-tbody').innerHTML = error.replace('colspan="6"', 'colspan="7"');
                 return;
             }
 
@@ -197,9 +212,9 @@
             try {
                 pendingResets = await apiCall('/admin/reset-requests');
             } catch (e) {
+                resetsLoadError = true;
                 document.getElementById('resets-tbody').innerHTML =
                     `<tr><td colspan="3">Unable to load reset requests: ${escapeHtml(e.message)}</td></tr>`;
-                return;
             }
 
             const applicationsBody = document.getElementById('examiner-applications-tbody');
@@ -221,43 +236,37 @@
                 applicationsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px;">No pending examiner registrations.</td></tr>';
             }
 
-            // Render User Accounts
-            const uTbody = document.getElementById('users-tbody');
-            uTbody.innerHTML = '';
-            if (!users || users.length === 0) {
-                uTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-text); padding:24px;">No registered accounts found.</td></tr>`;
-            } else {
-                users.forEach(u => {
-                    const tr = document.createElement('tr');
-                    const reviewRequired = u.role === 'EXAMINER' && u.examiner_status !== 'approved';
-                    const status = reviewRequired ? (u.examiner_status === 'pending' ? 'Pending approval' : 'Rejected')
-                        : u.is_locked ? 'Locked' : 'Active';
-                    tr.innerHTML = `
-                        <td style="font-weight: 600; color: var(--navy);">${escapeHtml(u.username)}</td>
-                        <td style="color: var(--gray-text);">${escapeHtml(u.email)}</td>
-                        <td>${escapeHtml(u.name || u.username)}</td>
-                        <td>
-                            ${reviewRequired ? 'EXAMINER' : `<select onchange="updateRole('${u.id}', this.value)">
-                                <option value="STUDENT" ${u.role === 'STUDENT' ? 'selected' : ''}>STUDENT</option>
-                                <option value="EXAMINER" ${u.role === 'EXAMINER' ? 'selected' : ''}>EXAMINER</option>
-                                <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
-                            </select>`}
-                        </td>
-                        <td><span class="deficiency-tag ${status === 'Active' ? 'tag-proficient' : 'tag-deficient'}">${escapeHtml(status)}</span></td>
-                        <td style="text-align: right;">
-                            ${u.is_locked && !reviewRequired ? `<button class="btn-outline-pill" style="padding: 4px 12px; font-size: 0.78rem;" onclick="unlockUser('${u.id}')">Unlock</button>` : '<span style="color:var(--gray-text);">—</span>'}
-                        </td>
-                    `;
-                    uTbody.appendChild(tr);
-                });
-            }
+            const statusCell = u => {
+                const status = u.role === 'EXAMINER' && u.examiner_status !== 'approved'
+                    ? (u.examiner_status === 'pending' ? 'Pending approval' : 'Rejected')
+                    : u.is_locked ? 'Locked' : 'Active';
+                return `<span class="deficiency-tag ${status === 'Active' ? 'tag-proficient' : 'tag-deficient'}">${escapeHtml(status)}</span>`;
+            };
+            const actionCell = u => {
+                if (u.role === 'EXAMINER' && u.examiner_status !== 'approved') return '—';
+                const action = u.is_locked ? 'Unlock' : 'Lock';
+                return `<button class="btn-outline-pill" style="padding:4px 12px; font-size:0.78rem;" onclick="${u.is_locked ? 'unlockUser' : 'lockUser'}(${Number(u.id)})">${action}</button>`;
+            };
+            const students = users.filter(u => u.role === 'STUDENT');
+            const examiners = users.filter(u => u.role === 'EXAMINER' && u.examiner_status === 'approved');
+            document.getElementById('students-tbody').innerHTML = students.length ? students.map(u => `<tr>
+                <td>${escapeHtml(u.name || '—')}</td><td>${escapeHtml(u.username)}</td>
+                <td>${escapeHtml(u.email)}</td><td>Student / Examinee</td>
+                <td>${statusCell(u)}</td><td style="text-align:right;">${actionCell(u)}</td>
+            </tr>`).join('') : '<tr><td colspan="6" style="text-align:center; padding:24px;">No registered students.</td></tr>';
+            document.getElementById('examiners-tbody').innerHTML = examiners.length ? examiners.map(u => `<tr>
+                <td>${escapeHtml(u.name || '—')}</td><td>${escapeHtml(u.username)}</td>
+                <td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.professional_title || '—')}</td>
+                <td>${escapeHtml(u.license_number || '—')}</td><td>${statusCell(u)}</td>
+                <td style="text-align:right;">${actionCell(u)}</td>
+            </tr>`).join('') : '<tr><td colspan="7" style="text-align:center; padding:24px;">No registered examiners.</td></tr>';
 
             // Render Pending Resets
             const rTbody = document.getElementById('resets-tbody');
-            rTbody.innerHTML = '';
-            if (!pendingResets || pendingResets.length === 0) {
+            if (!resetsLoadError) rTbody.innerHTML = '';
+            if (!resetsLoadError && (!pendingResets || pendingResets.length === 0)) {
                 rTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--gray-text); padding:24px;">No pending password reset requests.</td></tr>`;
-            } else {
+            } else if (!resetsLoadError) {
                 pendingResets.forEach(r => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -274,7 +283,10 @@
         }
 
         async function decideExaminer(userId, approve) {
-            if (!confirm(`${approve ? 'Approve' : 'Reject'} this examiner registration?`)) return;
+            if (!await confirmActionDialog({
+                message: `Are you sure you want to ${approve ? 'approve' : 'reject'} this examiner registration?`,
+                confirmLabel: approve ? 'Yes, Approve' : 'Yes, Reject'
+            })) return;
             try {
                 await apiCall(`/admin/examiner-applications/${userId}/decision`, {
                     method: 'POST', body: JSON.stringify({ approve })
@@ -285,19 +297,24 @@
             }
         }
 
-        async function updateRole(userId, newRole) {
+        async function lockUser(userId) {
+            if (!await confirmActionDialog({
+                message: 'Lock this account? The user will be signed out and unable to sign in until you unlock it.',
+                confirmLabel: 'Yes, Lock Account'
+            })) return;
             try {
-                await apiCall(`/admin/users/${userId}/role`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ role: newRole })
-                });
+                await apiCall(`/admin/users/${userId}/lock`, { method: 'POST' });
                 await loadAccountsData();
             } catch (err) {
-                alert('Could not update role: ' + err.message);
+                alert('Could not lock user: ' + err.message);
             }
         }
 
         async function unlockUser(userId) {
+            if (!await confirmActionDialog({
+                message: 'Unlock this account and allow the user to sign in again?',
+                confirmLabel: 'Yes, Unlock Account'
+            })) return;
             try {
                 await apiCall(`/admin/users/${userId}/unlock`, { method: 'POST' });
                 await loadAccountsData();

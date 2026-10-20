@@ -286,6 +286,32 @@ let sessionUser = { role: 'GUEST', name: 'Guest Reviewee' };
 let csrfToken = null;
 let bankCache = [];
 let historyCache = [];
+let answerSaveTimer = null;
+let pendingAnswerSnapshot = null;
+let answerSaveChain = Promise.resolve();
+let lastAnswerSignature = '';
+
+function flushPendingExamAnswers() {
+    if (answerSaveTimer) clearTimeout(answerSaveTimer);
+    answerSaveTimer = null;
+    const snapshot = pendingAnswerSnapshot;
+    pendingAnswerSnapshot = null;
+    if (!snapshot) return answerSaveChain;
+    answerSaveChain = answerSaveChain.catch(() => {}).then(async () => {
+        const result = await apiCall(`/exams/attempts/${encodeURIComponent(snapshot.attemptId)}/answers`, {
+            method: 'PUT', body: JSON.stringify({ answers: snapshot.answers })
+        });
+        if (result.expired) throw new Error('The server deadline has passed. Later answers were not saved.');
+        return result;
+    }).catch(error => {
+        const active = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.ACTIVE_EXAM) || 'null');
+        if (!pendingAnswerSnapshot && active?.attemptId === snapshot.attemptId) {
+            pendingAnswerSnapshot = snapshot;
+        }
+        throw error;
+    });
+    return answerSaveChain;
+}
 
 async function apiCall(path, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -332,7 +358,7 @@ function renderSessionNavigation(navBar, activePage = '') {
         STUDENT: [
             ['examinee-dashboard.html', 'DASHBOARD'], ['subjects.html', 'DISCIPLINES'],
             ['generator.html', 'PRACTICE EXAM'], ['mock-exam.html', 'MOCK EXAM'],
-            ['exam-history.html', 'HISTORY']
+            ['exam-history.html', 'HISTORY'], ['profile.html', 'PROFILE']
         ]
     };
     const links = menus[sessionUser.role] || [];
@@ -365,6 +391,79 @@ function confirmLogout() {
         document.body.appendChild(dialog);
         dialog.showModal();
         dialog.querySelector('.logout-dialog__cancel').focus();
+    });
+}
+
+let activeActionDialog = null;
+// The latest recorded result for a domain determines its current remediation status.
+function getRemediationDomains(history) {
+    const latestByDomain = new Map();
+    for (const exam of history || []) {
+        for (const domain of exam.domains || []) {
+            if (!domain?.name || latestByDomain.has(domain.name)) continue;
+            const score = Number(domain.scorePct);
+            latestByDomain.set(domain.name, Number.isFinite(score) ? score :
+                (Number(domain.total) > 0 ? 100 * Number(domain.correct || 0) / Number(domain.total) : 100));
+        }
+    }
+    return [...latestByDomain].filter(([, score]) => score < 60).map(([name]) => name);
+}
+
+function confirmActionDialog({ message, confirmLabel, cancelLabel = 'No, Cancel' }) {
+    if (activeActionDialog) return Promise.resolve(false);
+    return new Promise(resolve => {
+        const dialog = document.createElement('dialog');
+        activeActionDialog = dialog;
+        dialog.className = 'logout-dialog';
+        dialog.setAttribute('aria-labelledby', 'action-confirm-title');
+        dialog.innerHTML = `
+            <form method="dialog" class="logout-dialog__card">
+                <svg class="logout-dialog__icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                    <path d="M40 7 66 18v19c0 18-11 29-26 36C25 66 14 55 14 37V18L40 7Z" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M40 21v25m0 10v2" stroke="#FF8F95" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <p id="action-confirm-title"></p>
+                <button type="submit" value="cancel" class="logout-dialog__cancel"></button>
+                <button type="submit" value="confirm" class="logout-dialog__confirm"></button>
+            </form>`;
+        dialog.querySelector('#action-confirm-title').textContent = message;
+        dialog.querySelector('.logout-dialog__cancel').textContent = cancelLabel;
+        dialog.querySelector('.logout-dialog__confirm').textContent = confirmLabel;
+        dialog.addEventListener('close', () => {
+            const confirmed = dialog.returnValue === 'confirm';
+            activeActionDialog = null;
+            dialog.remove();
+            resolve(confirmed);
+        }, { once: true });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        dialog.querySelector('.logout-dialog__cancel').focus();
+    });
+}
+
+function requestRejectionReason() {
+    if (activeActionDialog) return Promise.resolve(null);
+    return new Promise(resolve => {
+        const dialog = document.createElement('dialog');
+        activeActionDialog = dialog;
+        dialog.className = 'logout-dialog';
+        dialog.setAttribute('aria-labelledby', 'rejection-title');
+        dialog.innerHTML = `<form method="dialog" class="logout-dialog__card">
+            <p id="rejection-title">Why are you rejecting this question change?</p>
+            <label for="rejection-reason">The examiner will see this note.</label>
+            <textarea id="rejection-reason" class="logout-dialog__reason" required maxlength="500" rows="4" placeholder="Explain what needs to be corrected"></textarea>
+            <button type="submit" value="cancel" formnovalidate class="logout-dialog__cancel">No, Cancel</button>
+            <button type="submit" value="confirm" class="logout-dialog__confirm">Reject with Note</button>
+        </form>`;
+        dialog.addEventListener('close', () => {
+            const reason = dialog.returnValue === 'confirm' ? dialog.querySelector('#rejection-reason').value.trim() : '';
+            activeActionDialog = null;
+            dialog.remove();
+            resolve(reason || null);
+        }, { once: true });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        dialog.querySelector('#rejection-reason').focus();
     });
 }
 
@@ -447,12 +546,13 @@ const CpedleDB = {
         sessionUser = result.user;
         return result.user;
     },
-    async changeOwnEmail(email, currentPassword) {
-        const result = await apiCall('/profile/email', {
-            method: 'PUT', body: JSON.stringify({ email, current_password: currentPassword })
+    async changeOwnPassword(currentPassword, newPassword, confirmPassword) {
+        return apiCall('/profile/password', {
+            method: 'PUT', body: JSON.stringify({
+                current_password: currentPassword, new_password: newPassword,
+                confirm_password: confirmPassword
+            })
         });
-        sessionUser = result.user;
-        return result.user;
     },
     async logout() {
         if (!await confirmLogout()) return;
@@ -477,8 +577,9 @@ const CpedleDB = {
         return result;
     },
     async deleteQuestion(id) {
-        await apiCall('/questions/' + encodeURIComponent(id), { method: 'DELETE' });
+        const result = await apiCall('/questions/' + encodeURIComponent(id), { method: 'DELETE' });
         await refreshBootstrap();
+        return result;
     },
     async bulkImport(items) {
         const result = await apiCall('/questions/import', {
@@ -499,10 +600,55 @@ const CpedleDB = {
             totalItems: issued.questions.length,
             timeSeconds: issued.timeSeconds,
             startedAt: issued.startedAt,
+            expiresAt: issued.expiresAt,
+            serverClockOffset: issued.serverNow - Date.now() / 1000,
             questions: issued.questions.map(q => ({ ...chooseQuestionFormat(q), userAns: null, flagged: false }))
         };
+        lastAnswerSignature = '';
+        answerSaveChain = Promise.resolve();
         sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(exam));
         return exam;
+    },
+    async startPracticeExam(options) {
+        if (sessionUser.role !== 'STUDENT') throw new Error('Sign in as an examinee to start a practice exam.');
+        const old = this.getActiveExam();
+        if (old?.attemptId) await this.discardActiveExam();
+        const exam = this.generateExam({ ...options, mode: 'student_practice' });
+        try {
+            const issued = await apiCall('/exams/practice/start', {
+                method: 'POST', body: JSON.stringify({
+                    question_ids: exam.questions.map(question => question.id),
+                    selected_domains: exam.selectedDomains,
+                    time_minutes: options.timeMinutes
+                })
+            });
+            Object.assign(exam, { attemptId: issued.attemptId, startedAt: issued.startedAt,
+                expiresAt: issued.expiresAt, timeSeconds: issued.timeSeconds,
+                serverClockOffset: issued.serverNow - Date.now() / 1000,
+                title: issued.title });
+            lastAnswerSignature = '';
+            answerSaveChain = Promise.resolve();
+            sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(exam));
+            return exam;
+        } catch (error) {
+            sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
+            throw error;
+        }
+    },
+    async syncActiveExam() {
+        const exam = this.getActiveExam();
+        if (!exam?.attemptId) return null;
+        const status = await apiCall(`/exams/attempts/${encodeURIComponent(exam.attemptId)}`);
+        exam.expiresAt = status.expiresAt;
+        exam.serverClockOffset = status.serverNow - Date.now() / 1000;
+        for (const question of exam.questions) {
+            if ((question.userAns === null || question.userAns === undefined || question.userAns === '') &&
+                    Object.hasOwn(status.answers, question.id)) {
+                question.userAns = status.answers[question.id];
+            }
+        }
+        sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(exam));
+        return status;
     },
     getTosPlan(options) {
         requireStudentExamScope(options.domain);
@@ -666,9 +812,31 @@ const CpedleDB = {
 
     saveActiveExamState(examData) {
         sessionStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(examData));
+        if (sessionUser.role !== 'STUDENT' || !examData.attemptId) return;
+        const answers = examData.questions.map(question => ({ id: question.id, userAns: question.userAns }));
+        const signature = JSON.stringify(answers);
+        if (signature === lastAnswerSignature) return;
+        lastAnswerSignature = signature;
+        pendingAnswerSnapshot = { attemptId: examData.attemptId, answers };
+        if (answerSaveTimer) clearTimeout(answerSaveTimer);
+        answerSaveTimer = setTimeout(() => {
+            flushPendingExamAnswers().catch(error => console.warn('Exam answer autosave failed:', error));
+        }, 350);
     },
 
-    discardActiveExam() {
+    async discardActiveExam() {
+        const exam = this.getActiveExam();
+        if (exam?.attemptId) {
+            const result = await apiCall(`/exams/attempts/${encodeURIComponent(exam.attemptId)}`, {
+                method: 'DELETE'
+            });
+            if (result.expired) throw new Error('Time expired before exit. Your saved answers were submitted.');
+        }
+        if (answerSaveTimer) clearTimeout(answerSaveTimer);
+        answerSaveTimer = null;
+        pendingAnswerSnapshot = null;
+        lastAnswerSignature = '';
+        answerSaveChain = Promise.resolve();
         sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
     },
 
@@ -676,9 +844,19 @@ const CpedleDB = {
         const exam = this.getActiveExam();
         if (!exam || !exam.questions.length) return null;
         const persist = sessionUser.role === 'STUDENT' && exam.mode !== 'practice';
-        const result = await apiCall(persist ? '/exams/submit' : '/exams/practice-score', {
+        if (exam.attemptId && ['licensure', 'student_practice'].includes(exam.mode)) {
+            try {
+                await flushPendingExamAnswers();
+            } catch (error) {
+                if (!/deadline|already been submitted/i.test(error.message)) throw error;
+            }
+        }
+        const timed = exam.attemptId && ['licensure', 'student_practice'].includes(exam.mode);
+        const result = await apiCall(timed
+            ? `/exams/attempts/${encodeURIComponent(exam.attemptId)}/submit`
+            : persist ? '/exams/submit' : '/exams/practice-score', {
             method: 'POST',
-            body: JSON.stringify({
+            body: timed ? '{}' : JSON.stringify({
                 title: exam.title,
                 mode: exam.mode,
                 ...(exam.mode === 'licensure' ? { attempt_id: exam.attemptId } : {}),
@@ -697,6 +875,12 @@ const CpedleDB = {
             result.date = new Date().toISOString().replace('T', ' ').substring(0, 16);
             // Anonymous practice: temporary tab result only, never a user or database row.
             sessionStorage.setItem(STORAGE_KEYS.GUEST_RESULT, JSON.stringify(result));
+        }
+        if (timed) {
+            pendingAnswerSnapshot = null;
+            lastAnswerSignature = '';
+            answerSaveChain = Promise.resolve();
+            sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
         }
         return result;
     },

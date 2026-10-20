@@ -3,203 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Examinee Dashboard | cpedle</title>
+    <title>Dashboard | Examinee | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
     <script src="js/theme-toggle.js"></script>
+    <style>
+        .dash-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 24px; }
+        @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+        .stat-box { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+        .stat-card h3 { font-size: 0.85rem; color: var(--gray-text); font-style: normal; text-transform: uppercase; }
+        .stat-card .val { font-size: 2rem; font-weight: 700; color: var(--navy); }
+    </style>
 </head>
 <body>
-    <script>
-        enforceRoleGuard(['STUDENT', 'ADMIN']);
-    </script>
-
-    <!-- NAVIGATION BAR -->
     <nav class="new-nav">
         <div class="nav__content">
-            <a href="index.html" class="nav-logo-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    <polyline points="9 12 11 14 15 10"></polyline>
-                </svg>
+            <a href="examinee-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                 <span>cpedle</span>
             </a>
-            <div class="nav__control">
-                <input type="checkbox" id="menu" class="sr-only" />
-                <label for="menu">
-                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    <span class="sr-only">Toggle Menu</span>
-                </label>
-            </div>
-            <div class="nav__options" id="nav-options-bar">
-                <a class="link" href="examinee-dashboard.html" aria-current="page">DASHBOARD</a>
-                <a class="link" href="subjects.html">DISCIPLINES</a>
-                <a class="link" href="generator.html">PRACTICE EXAM</a>
-                <a class="link" href="mock-exam.html">MOCK EXAM</a>
-                <a class="link" href="exam-history.html">HISTORY</a>
-                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-            </div>
+            <div class="nav__options" id="student-nav-bar"></div>
         </div>
     </nav>
 
-    <!-- FIXED THEME TOGGLE BUTTON -->
-    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
-        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
-        </svg>
-        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
-        </svg>
-        <span class="sr-only">Toggle Theme</span>
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
     </button>
 
-    <section class="section-padding container">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; flex-wrap: wrap; gap: 20px;">
-            <div>
-                <span class="postcard-tag">Computer Engineering Examinee</span>
-                <h1 id="examinee-greeting" style="font-size: 2.3rem; margin-top: 5px;">Welcome Back</h1>
-                <p style="color: var(--gray-text); font-size: 0.95rem;">Track readiness, review topic deficiencies, and build custom test simulations.</p>
+    <div class="container section-padding">
+        <h1 class="serif-heading" style="font-size: 2.5rem;">Welcome, <span id="user-name">Examinee</span></h1>
+        <p style="color: var(--gray-text);" id="user-discipline-text">Discipline: Loading...</p>
+
+        <div class="stat-box" style="margin-top: 24px;">
+            <div class="stat-card">
+                <h3>Completed Exams</h3>
+                <div class="val" id="stat-completed">0</div>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <a href="generator.html" class="btn-solid-pill">Create Practice Exam</a>
-                <a href="mock-exam.html" class="btn-solid-pill">Take a Mock Licensure Exam</a>
+            <div class="stat-card">
+                <h3>Average Score</h3>
+                <div class="val" id="stat-avg">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Deficient Domains</h3>
+                <div class="val" id="stat-deficient" style="color: var(--coral);">0</div>
             </div>
         </div>
 
-        <!-- Metric Snapshot Cards -->
-        <div class="steps-grid" style="margin-bottom: 45px;">
-            <div class="card" style="padding: 24px;">
-                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-text); font-weight: 600;">Overall Mock Exam Rating</span>
-                <div id="stat-overall" class="big-num text-teal" style="font-size: 2.8rem; margin: 10px 0 5px;">0%</div>
-                <p id="stat-rating-label" style="font-size: 0.85rem; color: var(--gray-text);">Based on latest diagnostic simulation</p>
-            </div>
-            <div class="card" style="padding: 24px;">
-                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-text); font-weight: 600;">Deficient Competencies</span>
-                <div id="stat-deficiencies" class="big-num text-coral" style="font-size: 2.8rem; margin: 10px 0 5px;">0</div>
-                <p style="font-size: 0.85rem; color: var(--gray-text);"><a href="remediation.html" style="color: var(--teal); font-weight: 600;">Review in Remediation Queue →</a></p>
-            </div>
-            <div class="card" style="padding: 24px;">
-                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-text); font-weight: 600;">Total Mock Exams</span>
-                <div id="stat-attempts" class="big-num text-navy" style="font-size: 2.8rem; margin: 10px 0 5px;">0</div>
-                <p style="font-size: 0.85rem; color: var(--gray-text);"><a href="exam-history.html" style="color: var(--teal); font-weight: 600;">View Full Exam History →</a></p>
-            </div>
-        </div>
-
-        <!-- Recent Attempts & Quick Actions -->
-        <div class="split-layout">
-            <div>
-                <h3 style="font-size: 1.4rem; margin-bottom: 20px;">Recent Exam History</h3>
-                <div id="recent-history-list" style="display: flex; flex-direction: column; gap: 15px;">
-                    <!-- Populated dynamically -->
+        <div class="dash-grid">
+            <div class="card" style="position: relative;">
+                <h2 style="font-size: 1.4rem; margin-bottom: 16px;">Quick Actions</h2>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a class="btn-solid-pill" href="mock-exam.html">Take Mock Licensure Exam</a>
+                    <a class="btn-outline-pill" href="generator.html">Build Practice Exam</a>
+                    <a class="btn-solid-pill coral-btn" href="remediation.html">Open Remediation</a>
                 </div>
             </div>
 
-            <div>
-                <h3 style="font-size: 1.4rem; margin-bottom: 20px;">Targeted Review Shortcuts</h3>
-                <div class="card" style="padding: 24px;">
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="font-style: normal; margin-bottom: 5px;">Remediation Drills</h4>
-                        <p style="font-size: 0.85rem; color: var(--gray-text); margin-bottom: 12px;">Reinforce concepts where your latest score was below 60%.</p>
-                        <a href="remediation.html" class="btn-outline-pill" style="font-size: 0.85rem; padding: 6px 16px;">Open Remediation</a>
-                    </div>
-                    <hr class="footer-divider" style="margin: 15px 0;">
-                    <div>
-                        <h4 style="font-style: normal; margin-bottom: 5px;">Build Practice Exam</h4>
-                        <p style="font-size: 0.85rem; color: var(--gray-text); margin-bottom: 12px;">Select custom difficulty profiles and time allocations.</p>
-                        <a href="generator.html" class="btn-solid-pill" style="font-size: 0.85rem; padding: 6px 16px;">Create Practice Exam</a>
-                    </div>
+            <div class="card" style="position: relative;">
+                <h2 style="font-size: 1.4rem; margin-bottom: 16px;">Recent Performance</h2>
+                <div id="latest-result-box">
+                    <p style="color: var(--gray-text);">No recent exams taken yet.</p>
                 </div>
             </div>
         </div>
-    </section>
-
-    <!-- FOOTER -->
-    <footer class="footer bg-white">
-        <div class="container">
-            <div class="footer-top">
-                <div class="footer-col">
-                    <a href="faq.html">FAQ & Help</a>
-                    <a href="index.html#how-it-works">How It Works</a>
-                    <a href="subjects.html">CpE Disciplines</a>
-                    <a href="login.html">Examinee Portal</a>
-                </div>
-                <div class="footer-col">
-                    <a href="generator.html">Practice Exam</a>
-                    <a href="exam-history.html">Score Reports</a>
-                    <a href="remediation.html">Remediation Exams</a>
-                    <a href="test-bank.html">Admin Test Bank</a>
-                </div>
-            </div>
-            <div class="footer-programs">
-                <div class="trust-badges small">
-                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
-                </div>
-            </div>
-            <hr class="footer-divider">
-            <div class="footer-bottom">
-                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-                info@cpedle.com
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            await CpedleDB.ready;
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('student-nav-bar'), 'examinee-dashboard.html');
+
             const user = CpedleDB.getCurrentUser();
-            if (user && user.name) {
-                document.getElementById('examinee-greeting').innerText = `Hello, ${user.name}`;
-            }
+            document.getElementById('user-name').textContent = user.name || user.username || 'Examinee';
+            document.getElementById('user-discipline-text').textContent = 'Discipline: ' + (user.discipline || 'Unassigned');
 
             const history = CpedleDB.getExamHistory();
-            const mockHistory = history.filter(item => ['licensure', 'mock', 'legacy'].includes(item.mode));
-            document.getElementById('stat-attempts').innerText = mockHistory.length;
-
-            if (mockHistory.length > 0) {
-                const latest = mockHistory[0];
-                document.getElementById('stat-overall').innerText = `${latest.scorePct}%`;
+            document.getElementById('stat-completed').textContent = history.length;
+            if (history.length) {
+                const avg = Math.round(history.reduce((sum, exam) => sum + (Number(exam.scorePct) || 0), 0) / history.length);
+                document.getElementById('stat-avg').textContent = avg + '%';
+                document.getElementById('stat-deficient').textContent = getRemediationDomains(history).length;
                 
-                let deficientCount = 0;
-                if (latest.domains) {
-                    deficientCount = latest.domains.filter(d => d.tag === 'Deficient').length;
-                }
-                document.getElementById('stat-deficiencies').innerText = deficientCount;
-
-            }
-
-            if (history.length > 0) {
-                const recentContainer = document.getElementById('recent-history-list');
-                recentContainer.innerHTML = '';
-
-                history.slice(0, 3).forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = 'card';
-                    row.style.padding = '20px';
-                    row.style.display = 'flex';
-                    row.style.justifyContent = 'space-between';
-                    row.style.alignItems = 'center';
-                    row.innerHTML = `
-                        <div>
-                            <h4 style="font-style: normal; margin-bottom: 4px; font-size: 1.05rem;">${escapeHtml(item.title)}</h4>
-                            <span style="font-size: 0.8rem; color: var(--gray-text);">${item.date} • ${item.totalItems} Items</span>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 1.25rem; font-weight: 700; color: ${item.scorePct >= 75 ? 'var(--teal)' : (item.scorePct >= 60 ? '#D97706' : 'var(--coral)')};">${item.scorePct}%</span>
-                            <div style="font-size: 0.75rem;"><a href="exam-history.html" style="color: var(--teal); font-weight: 600;">View Breakdown →</a></div>
-                        </div>
-                    `;
-                    recentContainer.appendChild(row);
-                });
-            } else {
-                document.getElementById('recent-history-list').innerHTML = `
-                    <div class="card" style="padding: 24px; text-align: center; color: var(--gray-text);">
-                        No exams taken yet. Start with a mock or practice exam to see your results.
-                    </div>
+                const latest = history[0];
+                document.getElementById('latest-result-box').innerHTML = `
+                    <div style="font-size: 1.1rem; font-weight: 700;">${escapeHtml(latest.title || 'Practice Exam')}</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--teal);">${Number(latest.scorePct) || 0}%</div>
+                    <div style="font-size: 0.85rem; color: var(--gray-text);">${escapeHtml(latest.date || '')}</div>
                 `;
             }
         });

@@ -2,197 +2,109 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Question Approvals | cpedle Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Approvals | Admin | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
     <style>
-        #question-approval-list { display: grid; gap: 22px; margin-top: 24px; }
-        .approval-card { border: 1px solid var(--border); }
-        .approval-header { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
-        .approval-header h2 { font-size: 1.35rem; line-height: 1.3; }
-        .approval-header p { color: var(--gray-text); font-size: 0.9rem; }
-        .approval-badge { border-radius: 999px; padding: 4px 11px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
-        .approval-badge.add { background: rgba(46, 196, 182, 0.14); color: var(--dark-teal); }
-        .approval-badge.edit { background: rgba(255, 107, 107, 0.14); color: var(--coral); }
-        .approval-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 18px; }
-        .approval-preview { border: 1px solid var(--border); border-radius: 12px; padding: 22px; background: var(--surface); }
-        .approval-preview h3 { font-size: 1.05rem; margin-bottom: 14px; }
-        .approval-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; white-space: pre-wrap; }
-        .approval-options { display: grid; gap: 9px; list-style: none; margin-bottom: 16px; }
-        .approval-options li { border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; overflow-wrap: anywhere; }
-        .approval-options li.correct { border-color: var(--teal); background: color-mix(in srgb, var(--teal) 9%, var(--surface)); font-weight: 600; }
-        .approval-option-letter { display: inline-block; min-width: 28px; font-weight: 700; }
-        .approval-correct-note { color: var(--dark-teal); font-size: 0.85rem; margin-left: 8px; }
-        .approval-tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 15px 0 0; }
-        .approval-tags span { border-radius: 999px; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; font-size: 0.8rem; }
-        .approval-explanation { margin-top: 14px; color: var(--gray-text); font-size: 0.9rem; white-space: pre-wrap; }
-        .approval-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+        .approvals-container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+        .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 15px var(--shadow); }
+        .approval-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .question-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--navy); }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .option-item { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+        .option-item.correct { border-color: var(--teal); background: rgba(46, 196, 182, 0.1); font-weight: 600; }
+        .action-btns { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
     </style>
 </head>
 <body>
     <nav class="new-nav">
         <div class="nav__content">
             <a href="admin-dashboard.html" class="nav-logo-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    <polyline points="9 12 11 14 15 10"></polyline>
-                </svg>
-                <span>cpedle Admin</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>cpedle</span>
             </a>
-            <div class="nav__control">
-                <input type="checkbox" id="menu" class="sr-only" />
-                <label for="menu">
-                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    <span class="sr-only">Toggle Menu</span>
-                </label>
-            </div>
-            <div class="nav__options" id="admin-nav-bar">
-                <a class="link" href="admin-dashboard.html">OVERVIEW</a>
-                <a class="link" href="test-bank.html">TEST BANK</a>
-                <a class="link" href="admin-accounts.html">ACCOUNTS</a>
-                <a class="link" href="admin-question-approvals.html" aria-current="page" style="color: var(--teal); font-weight: 700;">QUESTION APPROVALS</a>
-                <a class="link" href="admin-reports.html">REPORTS</a>
-                <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-            </div>
+            <div class="nav__options" id="admin-nav-bar"></div>
         </div>
     </nav>
-    <section class="section-padding container">
-        <h1>Examiner Question Approvals</h1>
-        <p>Review each proposed addition or edit. A question enters or changes the live bank only after you approve it.</p>
-        <p id="review-message" role="status" aria-live="polite"></p>
-        <div id="question-approval-list"></div>
-    </section>
+
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/></svg>
+    </button>
+
+    <div class="approvals-container">
+        <h1 class="serif-heading" style="font-size: 2.2rem; margin-bottom: 20px;">Question Approval Queue</h1>
+        <div id="approvals-list"></div>
+    </div>
+
     <script>
-        function questionPreview(question, heading) {
-            const preview = document.createElement('section');
-            preview.className = 'approval-preview';
-            const title = document.createElement('h3');
-            title.textContent = heading;
-            preview.appendChild(title);
-
-            const prompt = document.createElement('p');
-            prompt.className = 'approval-question';
-            prompt.textContent = question.q || 'Question text unavailable';
-            preview.appendChild(prompt);
-
-            const options = document.createElement('ol');
-            options.className = 'approval-options';
-            (question.opts || []).forEach((option, index) => {
-                const row = document.createElement('li');
-                if (index === question.ans) row.className = 'correct';
-                const letter = document.createElement('span');
-                letter.className = 'approval-option-letter';
-                letter.textContent = `${String.fromCharCode(65 + index)}.`;
-                row.appendChild(letter);
-                row.appendChild(document.createTextNode(String(option).replace(/^[A-E][.)]\s*/, '')));
-                if (index === question.ans) {
-                    const correct = document.createElement('span');
-                    correct.className = 'approval-correct-note';
-                    correct.textContent = '✓ Correct answer';
-                    row.appendChild(correct);
-                }
-                options.appendChild(row);
-            });
-            preview.appendChild(options);
-
-            const tags = document.createElement('div');
-            tags.className = 'approval-tags';
-            for (const [label, value] of [['Domain', question.domain],
-                ['Cognitive level', question.cognitive], ['Difficulty', question.difficulty]]) {
-                const tag = document.createElement('span');
-                tag.textContent = `${label}: ${value || 'Not specified'}`;
-                tags.appendChild(tag);
-            }
-            preview.appendChild(tags);
-            if (question.explanation?.trim()) {
-                const explanation = document.createElement('p');
-                explanation.className = 'approval-explanation';
-                explanation.textContent = `Explanation: ${question.explanation}`;
-                preview.appendChild(explanation);
-            }
-            return preview;
-        }
-
-        async function loadQuestionApprovals() {
-            const changes = await apiCall('/questions/change-requests');
-            const list = document.getElementById('question-approval-list');
-            list.replaceChildren();
-            if (!changes.length) {
-                const empty = document.createElement('p');
-                empty.textContent = 'No question changes are awaiting approval.';
-                list.appendChild(empty);
-                return;
-            }
-            changes.forEach(change => {
-                const card = document.createElement('article');
-                card.className = 'card approval-card';
-                const header = document.createElement('div');
-                header.className = 'approval-header';
-                const badge = document.createElement('span');
-                badge.className = `approval-badge ${change.action.toLowerCase()}`;
-                badge.textContent = change.action === 'ADD' ? 'NEW QUESTION' : 'EDIT REQUEST';
-                header.appendChild(badge);
-                const details = document.createElement('div');
-                const heading = document.createElement('h2');
-                heading.textContent = `Item ${change.question.id || change.target_question_id}`;
-                details.appendChild(heading);
-                const byline = document.createElement('p');
-                byline.textContent = `Submitted by ${change.proposer} on ${change.submitted_at}`;
-                details.appendChild(byline);
-                header.appendChild(details);
-                card.appendChild(header);
-
-                const comparison = document.createElement('div');
-                comparison.className = 'approval-comparison';
-                if (change.action === 'EDIT') {
-                    const original = CpedleDB.getQuestions().find(q => q.id === change.target_question_id);
-                    if (original) comparison.appendChild(questionPreview(original, 'Current question'));
-                    else {
-                        const missing = document.createElement('p');
-                        missing.textContent = 'The original question is no longer in the live bank.';
-                        comparison.appendChild(missing);
-                    }
-                }
-                comparison.appendChild(questionPreview(change.question,
-                    change.action === 'EDIT' ? 'Proposed changes' : 'Proposed question'));
-                card.appendChild(comparison);
-                const actions = document.createElement('div');
-                actions.className = 'approval-actions';
-                for (const [label, approve] of [['Approve', true], ['Reject', false]]) {
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = approve ? 'btn-solid-pill' : 'btn-outline-pill';
-                    button.textContent = label;
-                    button.addEventListener('click', async () => {
-                        if (!confirm(`${label} this proposed ${change.action.toLowerCase()}?`)) return;
-                        const message = document.getElementById('review-message');
-                        try {
-                            await apiCall('/admin/questions/change-requests/' + change.id + '/decision', {
-                                method: 'POST', body: JSON.stringify({ approve })
-                            });
-                            await refreshBootstrap();
-                            message.style.color = '#16803d';
-                            message.textContent = `Question change ${label.toLowerCase()}d.`;
-                            await loadQuestionApprovals();
-                        } catch (error) {
-                            message.style.color = 'var(--coral)';
-                            message.textContent = error.message;
-                        }
-                    });
-                    actions.appendChild(button);
-                }
-                card.appendChild(actions);
-                list.appendChild(card);
-            });
-        }
         document.addEventListener('DOMContentLoaded', async () => {
-            await CpedleDB.ready;
-            try { await loadQuestionApprovals(); }
-            catch (error) { document.getElementById('review-message').textContent = error.message; }
+            await enforceRoleGuard(['ADMIN']);
+            renderSessionNavigation(document.getElementById('admin-nav-bar'), 'admin-question-approvals.html');
+            loadApprovals();
         });
+
+        async function loadApprovals() {
+            const list = document.getElementById('approvals-list');
+            try {
+                const submissions = await apiCall('/questions/change-requests');
+                if (!submissions.length) {
+                    list.innerHTML = '<div class="approval-card"><p>No pending question submissions found.</p></div>';
+                    return;
+                }
+                list.innerHTML = submissions.map(change => {
+                    const q = change.question;
+                    return `
+                    <div class="approval-card" id="request-${change.id}">
+                        <div class="approval-header">
+                            <div>
+                                <strong>${escapeHtml(change.action)} request</strong><br>
+                                <strong>Domain:</strong> ${escapeHtml(q.domain)} |
+                                <strong>Difficulty:</strong> ${escapeHtml(q.difficulty)} |
+                                <strong>Cognitive:</strong> ${escapeHtml(q.cognitive)}
+                            </div>
+                            <span class="deficiency-tag tag-satisfactory">Submitted by ${escapeHtml(change.proposer || 'Examiner')}</span>
+                        </div>
+                        <div class="question-text">${escapeHtml(q.q)}</div>
+                        ${change.action === 'DELETE' ? '<p>This approval will remove the question from the live bank.</p>' : ''}
+                        <div class="options-grid">
+                            ${(q.opts || []).map((opt, i) => `
+                                <div class="option-item ${i === q.ans ? 'correct' : ''}">
+                                    ${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}${i === q.ans ? '✓' : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${q.questionType === 'identification' || q.questionType === 'both'
+                            ? `<p><strong>Accepted identification answer:</strong> ${escapeHtml(q.answerText || '—')}</p>` : ''}
+                        ${q.explanation ? `<p><strong>Explanation:</strong> ${escapeHtml(q.explanation)}</p>` : ''}
+                        <div class="action-btns">
+                            <button class="btn-solid-pill coral-btn" onclick="decideQuestion(${change.id}, false)">Reject</button>
+                            <button class="btn-solid-pill" onclick="decideQuestion(${change.id}, true)">Approve</button>
+                        </div>
+                    </div>
+                `; }).join('');
+            } catch (err) {
+                list.innerHTML = `<div class="approval-card"><p style="color:var(--coral);">${escapeHtml(err.message)}</p></div>`;
+            }
+        }
+
+        async function decideQuestion(id, approve) {
+            const reason = approve ? '' : await requestRejectionReason();
+            if (approve && !await confirmActionDialog({
+                message: 'Are you sure you want to approve this question change?',
+                confirmLabel: 'Yes, Approve'
+            })) return;
+            if (!approve && !reason) return;
+            try {
+                await apiCall(`/admin/questions/change-requests/${encodeURIComponent(id)}/decision`, {
+                    method: 'POST', body: JSON.stringify({ approve, reason })
+                });
+                await loadApprovals();
+            } catch (err) { alert(err.message); }
+        }
     </script>
 </body>
 </html>

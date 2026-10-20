@@ -2,49 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Examiner Dashboard | cpedle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examiner Workspace | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
 </head>
 <body>
-    <nav class="new-nav"><div class="nav__content">
-        <a class="nav-logo-box" href="examiner-dashboard.html"><span>cpedle Examiner</span></a>
-        <div class="nav__control">
-            <input type="checkbox" id="menu" class="sr-only">
-            <label for="menu"><span class="sr-only">Toggle Menu</span>
-                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="examiner-dashboard.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
                 </svg>
-            </label>
+                <span>cpedle <em>Examiner</em></span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="examiner-nav-bar"></div>
         </div>
-        <div class="nav__options" id="examiner-nav-bar">
-            <a class="link" href="examiner-dashboard.html" aria-current="page">DASHBOARD</a>
-            <a class="link" href="test-bank.html">QUESTION BANK</a>
-            <a class="link" href="examiner-question-submissions.html">QUESTION SUBMISSIONS</a>
-            <a class="link" href="profile.html">PROFILE</a>
-            <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- MAIN EXAMINER WORKSPACE -->
+    <main class="container section-padding" style="max-width: 1000px;">
+        <div style="margin-bottom: 32px;">
+            <h1 class="serif-heading" style="font-size: 2.8rem; margin-bottom: 6px;">Examiner Workspace</h1>
+            <p style="color: var(--gray-text); font-size: 1.05rem;" id="examiner-info">Loading credentials...</p>
         </div>
-    </div></nav>
-    <section class="section-padding container">
-        <h1>Examiner Workspace</h1>
-        <p id="examiner-greeting" style="color:var(--gray-text)"></p>
-        <div class="card" style="margin-top:24px">
-            <h2>Question Bank</h2>
-            <p>Propose new questions and edits using the assigned Computer Engineering domains. An administrator must approve each change before it reaches the live bank.</p>
-            <p id="question-count"></p>
-            <a class="btn-solid-pill" href="test-bank.html">Submit Question Changes →</a>
+
+        <div class="card" style="position: relative; padding: 36px;">
+            <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 12px; font-style: italic;">Question Bank Management</h2>
+            <p style="color: var(--gray-text); font-size: 0.98rem; margin-bottom: 20px; max-width: 720px; line-height: 1.6;">
+                Propose new questions and edits across assigned Computer Engineering domains. An administrator must review and approve each submission before it enters the live item bank.
+            </p>
+            <p style="font-weight: 600; margin-bottom: 24px; color: var(--navy);" id="bank-count-text">
+                Loading question count...
+            </p>
+            <div>
+                <a class="btn-solid-pill lg" href="test-bank.html">Submit Question Changes →</a>
+            </div>
         </div>
-    </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            await CpedleDB.ready;
-            const user = CpedleDB.getCurrentUser();
+            await enforceRoleGuard(['EXAMINER']);
             renderSessionNavigation(document.getElementById('examiner-nav-bar'), 'examiner-dashboard.html');
-            document.getElementById('examiner-greeting').textContent =
-                `${user.name || user.username} • ${user.professionalTitle || 'Examiner'}`;
-            document.getElementById('question-count').textContent =
-                `${CpedleDB.getQuestions().length} question(s) currently in the bank.`;
+
+            const user = CpedleDB.getCurrentUser();
+            document.getElementById('examiner-info').textContent = `${user.name || user.username || 'Examiner'} • ${user.title || 'Computer Engineering Examiner'}`;
+
+            const questions = CpedleDB.getQuestions();
+            document.getElementById('bank-count-text').textContent = `${questions.length} question(s) currently in the active bank.`;
         });
     </script>
 </body>

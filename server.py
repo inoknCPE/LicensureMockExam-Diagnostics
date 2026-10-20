@@ -1,5 +1,7 @@
 """Localhost web app with server-enforced account roles."""
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from backend import current_session, initialize, router
+from backend import current_session, finalize_expired_attempts, initialize, router
 
 APP_DIR = Path(__file__).resolve().parent
 HTML_PAGES = {page.name for page in APP_DIR.glob("*.html")}
@@ -32,7 +34,22 @@ PAGE_ROLES = {
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize()
-    yield
+    async def expire_exams():
+        while True:
+            try:
+                await asyncio.to_thread(finalize_expired_attempts)
+            except Exception:
+                logging.exception("Could not check timed exam deadlines")
+            await asyncio.sleep(10)
+    task = asyncio.create_task(expire_exams())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(
     title="Licensure Exam Diagnostic System",

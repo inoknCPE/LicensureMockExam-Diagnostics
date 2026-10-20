@@ -3,16 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cpedle | Computer Engineering Review</title>
+    <title>How It Works | cpedle</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
     <script src="js/data.js"></script>
     <script src="js/theme-toggle.js"></script>
     <style>
+        .how-it-works-page {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+        }
         .hero-header {
             text-align: center;
             max-width: 800px;
             margin: 0 auto 48px;
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
         }
         .hero-header h1 {
             font-size: 3rem;
@@ -24,71 +34,17 @@
             font-size: 1.05rem;
             margin-top: 12px;
         }
-        .disciplines-grid {
+        .steps-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 24px;
-            margin-bottom: 48px;
+            max-width: 1100px;
+            margin: 0 auto;
         }
-        @media (max-width: 1024px) {
-            .disciplines-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        @media (max-width: 640px) {
-            .disciplines-grid {
+        @media (max-width: 900px) {
+            .steps-grid {
                 grid-template-columns: 1fr;
             }
-        }
-        .discipline-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: 0 4px 20px var(--shadow);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .discipline-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px var(--shadow);
-        }
-        .discipline-card.featured {
-            border: 2px solid var(--teal);
-            background: linear-gradient(180deg, var(--surface) 0%, rgba(13, 148, 136, 0.03) 100%);
-        }
-        .discipline-badge {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 1.2px;
-            color: var(--teal);
-        }
-        .discipline-title {
-            font-size: 1.5rem;
-            margin: 6px 0 16px;
-            line-height: 1.2;
-            color: var(--navy);
-        }
-        .domain-list {
-            padding-left: 18px;
-            margin: 0 0 24px 0;
-            font-size: 0.88rem;
-            color: var(--gray-text);
-            line-height: 1.6;
-        }
-        .domain-list li {
-            margin-bottom: 6px;
-        }
-        .card-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .card-actions button, .card-actions a {
-            flex: 1;
-            text-align: center;
         }
     </style>
 </head>
@@ -113,7 +69,7 @@
                 </label>
             </div>
             <div class="nav__options" id="user-nav-options">
-                <a class="link" href="index.html#how-it-works" aria-current="page">HOW IT WORKS</a>
+                <a class="link" href="index.html" aria-current="page">HOW IT WORKS</a>
                 <a class="link" href="subjects.html">SUBJECTS</a>
                 <a class="link" href="faq.html">FAQ</a>
                 <a class="link" href="signup.html">SIGN UP</a>
@@ -133,132 +89,32 @@
         <span class="sr-only">Toggle Theme</span>
     </button>
 
-    <!-- HERO SECTION -->
-    <main class="section-padding bg-cream" style="min-height: calc(100vh - 60px);">
+    <!-- HOW IT WORKS MAIN CONTENT -->
+    <main class="how-it-works-page bg-cream">
         <div class="container">
-            <div class="hero-header" id="how-it-works">
+            <div class="hero-header">
                 <span style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.85rem; font-weight: 700; color: var(--teal);">ACADEMIC MOCK EXAM ENGINE</span>
                 <h1 class="serif-heading">Computer Engineering Diagnostic Portal</h1>
                 <p>Explore the six Computer Engineering disciplines and their domains. Guests can try up to 10 available practice questions; only the score is shown, without saving a result. Mock exams are for registered students.</p>
             </div>
 
-            <!-- DISCIPLINES GRID -->
-            <div id="disciplines" class="disciplines-grid">
-                
-                <!-- DISCIPLINE 1 -->
-                <div class="discipline-card" data-discipline="Network Engineer">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 1</span>
-                        <h2 class="serif-heading discipline-title">Network Engineer</h2>
-                        <ul class="domain-list">
-                            <li>Networking Fundamentals</li>
-                            <li>Data Communications & Protocols</li>
-                            <li>Routing and Switching</li>
-                            <li>Network Security</li>
-                            <li>Wireless & Network Technologies</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Network Engineer')">Practice Drill</button>
-                    </div>
+            <!-- HOW IT WORKS PROCESS STEPS -->
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <h3 class="step-title">Select Discipline Domain</h3>
+                    <p class="step-desc">Browse across 6 disciplines and 30 specialized domains tailored for Computer Engineering examinees.</p>
                 </div>
-
-                <!-- DISCIPLINE 2 -->
-                <div class="discipline-card" data-discipline="Systems Operations Engineer">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 2</span>
-                        <h2 class="serif-heading discipline-title">Systems Operations</h2>
-                        <ul class="domain-list">
-                            <li>Operating System Fundamentals</li>
-                            <li>Process & Thread Management</li>
-                            <li>Memory Management</li>
-                            <li>File Systems and Storage</li>
-                            <li>I/O and System Management</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Systems Operations Engineer')">Practice Drill</button>
-                    </div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <h3 class="step-title">Take Diagnostic Drills</h3>
+                    <p class="step-desc">Guests can practice up to 10 items instantly. Registered students get full TOS-driven 100-question mock licensure exams.</p>
                 </div>
-
-                <!-- DISCIPLINE 3 -->
-                <div class="discipline-card" data-discipline="Computer Systems Architect">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 3</span>
-                        <h2 class="serif-heading discipline-title">Systems Architect</h2>
-                        <ul class="domain-list">
-                            <li>Computer Organization Fundamentals</li>
-                            <li>CPU & Instruction Set Architecture</li>
-                            <li>Memory Hierarchy and Cache</li>
-                            <li>I/O & Peripheral Organization</li>
-                            <li>Computer Arithmetic & Performance</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Computer Systems Architect')">Practice Drill</button>
-                    </div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <h3 class="step-title">Review & Remediate</h3>
+                    <p class="step-desc">Inspect domain performance cards. Scores below 60% automatically generate targeted remediation queues.</p>
                 </div>
-
-                <!-- DISCIPLINE 4 -->
-                <div class="discipline-card" data-discipline="Software Developer">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 4</span>
-                        <h2 class="serif-heading discipline-title">Software Developer</h2>
-                        <ul class="domain-list">
-                            <li>Software Engineering Fundamentals</li>
-                            <li>Software Development Life Cycle</li>
-                            <li>Requirements Analysis & Spec</li>
-                            <li>Software Design & Architecture</li>
-                            <li>Software Testing & Maintenance</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Software Developer')">Practice Drill</button>
-                    </div>
-                </div>
-
-                <!-- DISCIPLINE 5 -->
-                <div class="discipline-card" data-discipline="Algorithm Engineer">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 5</span>
-                        <h2 class="serif-heading discipline-title">Algorithm Engineer</h2>
-                        <ul class="domain-list">
-                            <li>Algorithm Analysis & Complexity</li>
-                            <li>Linear Data Structures</li>
-                            <li>Non-Linear Data Structures</li>
-                            <li>Sorting and Searching Algorithms</li>
-                            <li>Algorithm Design Techniques</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Algorithm Engineer')">Practice Drill</button>
-                    </div>
-                </div>
-
-                <!-- DISCIPLINE 6 -->
-                <div class="discipline-card" data-discipline="Digital Design Engineer">
-                    <div>
-                        <span class="discipline-badge">DISCIPLINE 6</span>
-                        <h2 class="serif-heading discipline-title">Digital Design</h2>
-                        <ul class="domain-list">
-                            <li>Boolean Algebra & Logic Gates</li>
-                            <li>Combinational Logic Circuits</li>
-                            <li>Sequential Logic Circuits</li>
-                            <li>Switching Theory & Minimization</li>
-                            <li>Digital System Design</li>
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn-outline-pill" data-guest-only hidden onclick="startDrill('Digital Design Engineer')">Practice Drill</button>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="discipline-card" data-student-only hidden style="padding: 32px; text-align: center; border: 1px dashed var(--border); background: var(--surface); align-items: center;">
-                <h2 class="serif-heading" style="font-size: 1.8rem; margin-bottom: 8px;">Looking for a custom practice exam?</h2>
-                <p style="color: var(--gray-text); font-size: 0.95rem; margin-bottom: 20px; max-width: 600px;">Choose one or more domains in your discipline, plus the question count, time limit, and difficulty.</p>
-                <a class="btn-solid-pill lg" href="generator.html">Create Practice Exam →</a>
             </div>
         </div>
     </main>
@@ -277,17 +133,7 @@
             await CpedleDB.ready;
             renderSessionNavigation(document.getElementById('user-nav-options'));
             showStudentMockLinks();
-            if (CpedleDB.getCurrentUser().role !== 'GUEST') {
-                document.querySelectorAll('.card-actions').forEach(actions => actions.remove());
-            }
         });
-
-        async function startDrill(domain) {
-            await CpedleDB.ready;
-            if (CpedleDB.getCurrentUser().role !== 'GUEST') return;
-            CpedleDB.generateExam({ domain, count: 10, mode: 'practice', timeMinutes: 15 });
-            window.location.href = 'exam.html';
-        }
     </script>
 </body>
 </html>

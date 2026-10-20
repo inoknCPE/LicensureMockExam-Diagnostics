@@ -147,7 +147,7 @@
                                 </div>
                                 <span class="bar-pct" style="font-weight: 600;">${d.scorePct}%</span>
                                 <span class="deficiency-tag ${tagClass}">${d.tag}</span>
-                                ${d.tag === 'Deficient' ? `<a href="remediation.html" style="font-size:0.75rem; color:var(--coral); font-weight:600; margin-left:8px;">Remediate →</a>` : ''}
+                                ${d.tag === 'Deficient' ? `<a href="remediation.html?domain=${encodeURIComponent(d.name)}" style="font-size:0.75rem; color:var(--coral); font-weight:600; margin-left:8px;">Remediate →</a>` : ''}
                             </div>
                         `;
                     }).join('');
