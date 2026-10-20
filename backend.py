@@ -643,6 +643,27 @@ def _create_verification_token(connection, user_id: int, now: int) -> str:
     return token
 
 
+def _clear_verification_send_cooldown(user_id: int) -> None:
+    with db() as connection:
+        connection.execute(
+            "UPDATE email_verification_tokens SET sent_at=0 WHERE user_id=?",
+            (user_id,),
+        )
+
+
+def _log_brevo_error(error: HTTPError) -> None:
+    try:
+        details = json.loads(error.read(4096).decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        details = {}
+    code = details.get("code", "unknown") if isinstance(details, dict) else "unknown"
+    message = details.get("message", "No provider message") if isinstance(details, dict) else "No provider message"
+    logging.error(
+        "Brevo rejected verification email: HTTP %s, code=%s, message=%s",
+        error.code, str(code)[:100], str(message)[:500],
+    )
+
+
 def send_verification_email(email: str, token: str) -> None:
     api_key = os.environ.get("BREVO_API_KEY", "").strip()
     sender = os.environ.get("BREVO_FROM_EMAIL", "").strip()
@@ -695,7 +716,7 @@ def send_verification_email(email: str, token: str) -> None:
                 logging.error("Brevo rejected verification email with HTTP %s", response.status)
                 raise HTTPException(502, "The verification email could not be sent. Please try again.")
     except HTTPError as error:
-        logging.error("Brevo rejected verification email with HTTP %s", error.code)
+        _log_brevo_error(error)
         raise HTTPException(502, "The verification email could not be sent. Please try again.") from None
     except (URLError, TimeoutError) as error:
         logging.error("Could not reach Brevo to send verification email: %s", error)
@@ -866,7 +887,16 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
             token = _create_verification_token(connection, user_id, int(time.time()))
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username or email is already registered.") from None
-    send_verification_email(email, token)
+    try:
+        send_verification_email(email, token)
+    except HTTPException as error:
+        _clear_verification_send_cooldown(user_id)
+        raise HTTPException(
+            error.status_code,
+            "Your account was created, but the verification email could not be sent. "
+            "Use the 'Resend it' link on the sign-up or login page to retry. "
+            f"{error.detail}",
+        ) from error
     return {"message": "Account created. Check your email for a verification link."}
 
 
@@ -909,7 +939,16 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
             token = _create_verification_token(connection, user_id, now)
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username, email, or license number is already registered.") from None
-    send_verification_email(email, token)
+    try:
+        send_verification_email(email, token)
+    except HTTPException as error:
+        _clear_verification_send_cooldown(user_id)
+        raise HTTPException(
+            error.status_code,
+            "Your examiner application was created, but the verification email could not be sent. "
+            "Use the 'Resend it' link on the sign-up or login page to retry. "
+            f"{error.detail}",
+        ) from error
     return {"message": "Application submitted. Verify your email; administrator review follows."}
 
 
@@ -955,7 +994,11 @@ def resend_verification(payload: EmailVerificationResendIn, request: Request) ->
             return {"message": message}
         token = _create_verification_token(connection, user["id"], now)
         recipient = user["email"]
-    send_verification_email(recipient, token)
+    try:
+        send_verification_email(recipient, token)
+    except HTTPException:
+        _clear_verification_send_cooldown(user["id"])
+        raise
     return {"message": message}
 
 

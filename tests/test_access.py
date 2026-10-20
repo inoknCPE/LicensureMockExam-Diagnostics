@@ -1,5 +1,6 @@
 """Direct backend tests; no HTTP test client dependency is required."""
 
+import io
 import json
 import os
 import sys
@@ -299,6 +300,78 @@ class AccessTests(unittest.TestCase):
         ), request(method="POST"), Response())
         self.assertEqual(signed_in["user"]["role"], "STUDENT")
 
+    def test_failed_registration_send_allows_immediate_resend(self):
+        with patch.object(
+            backend,
+            "send_verification_email",
+            side_effect=HTTPException(502, "Provider rejected the request."),
+        ):
+            with self.assertRaises(HTTPException) as failed_send:
+                backend.register(backend.RegisterIn(
+                    username="student01", email="student@example.com",
+                    password="Valid@123", confirm_password="Valid@123",
+                ), request(method="POST"), Response())
+        self.assertIn("account was created", failed_send.exception.detail.lower())
+        self.assertIn("Resend it", failed_send.exception.detail)
+        with backend.db() as connection:
+            user_id, sent_at = connection.execute(
+                """SELECT users.id,email_verification_tokens.sent_at
+                   FROM users JOIN email_verification_tokens ON users.id=email_verification_tokens.user_id
+                   WHERE users.username='student01'"""
+            ).fetchone()
+            self.assertEqual(sent_at, 0)
+        with patch.object(backend, "send_verification_email") as resend:
+            response = backend.resend_verification(
+                backend.EmailVerificationResendIn(email="student@example.com"),
+                request(method="POST"),
+            )
+        self.assertIn("If an unverified account exists", response["message"])
+        resend.assert_called_once()
+        self.assertEqual(resend.call_args.args[0], "student@example.com")
+        with backend.db() as connection:
+            saved_sent_at = connection.execute(
+                "SELECT sent_at FROM email_verification_tokens WHERE user_id=?",
+                (user_id,),
+            ).fetchone()["sent_at"]
+            self.assertGreater(saved_sent_at, 0)
+
+    def test_failed_resend_does_not_start_cooldown(self):
+        with patch.object(backend, "send_verification_email"):
+            backend.register(backend.RegisterIn(
+                username="student01", email="student@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+            ), request(method="POST"), Response())
+        with backend.db() as connection:
+            user_id = connection.execute(
+                "SELECT id FROM users WHERE username='student01'"
+            ).fetchone()["id"]
+            connection.execute(
+                "UPDATE email_verification_tokens SET sent_at=? WHERE user_id=?",
+                (int(time.time()) - 61, user_id),
+            )
+        with patch.object(
+            backend,
+            "send_verification_email",
+            side_effect=HTTPException(502, "Provider rejected the request."),
+        ):
+            with self.assertRaises(HTTPException):
+                backend.resend_verification(
+                    backend.EmailVerificationResendIn(email="student@example.com"),
+                    request(method="POST"),
+                )
+        with backend.db() as connection:
+            sent_at = connection.execute(
+                "SELECT sent_at FROM email_verification_tokens WHERE user_id=?",
+                (user_id,),
+            ).fetchone()["sent_at"]
+            self.assertEqual(sent_at, 0)
+        with patch.object(backend, "send_verification_email") as retry:
+            backend.resend_verification(
+                backend.EmailVerificationResendIn(email="student@example.com"),
+                request(method="POST"),
+            )
+        retry.assert_called_once()
+
     def test_verification_links_expire(self):
         with patch.object(backend, "send_verification_email") as send_email:
             backend.register(backend.RegisterIn(
@@ -354,6 +427,21 @@ class AccessTests(unittest.TestCase):
             "https://cpedle.example.com/verify-email.html#token=opaque-token",
             payload["htmlContent"],
         )
+
+    def test_brevo_api_error_logs_provider_code_and_message(self):
+        error = backend.HTTPError(
+            "https://api.brevo.com/v3/smtp/email",
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(b'{"code":"unauthorized","message":"Invalid API key"}'),
+        )
+        with self.assertLogs(level="ERROR") as logs:
+            backend._log_brevo_error(error)
+        self.assertIn("HTTP 401", logs.output[0])
+        self.assertIn("unauthorized", logs.output[0])
+        self.assertIn("Invalid API key", logs.output[0])
+        error.close()
 
     def test_three_failures_lock_and_admin_reset_approval(self):
         self.register_student()
