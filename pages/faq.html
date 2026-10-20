@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequently Asked Questions | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="index.html#how-it-works">HOW IT WORKS</a>
+                <a class="link" href="subjects.html">SUBJECTS</a>
+                <a class="link" href="faq.html" aria-current="page">FAQ</a>
+                <a class="link" href="signup.html">SIGN UP</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <section class="section-padding container faq-section">
+        <h1 class="text-center" style="font-size: 2.5rem;">Help Center & FAQ</h1>
+        <p class="text-center" style="color: var(--gray-text); margin: 8px auto 35px; max-width: 650px;">Guides to the project's Computer Engineering disciplines, diagnostic scoring, and mock exam tools.</p>
+
+        <div class="faq-search-box">
+            <input type="text" id="faq-search-input" class="faq-search-input" placeholder="Type to filter answers (e.g. 'deficiency', 'networking', 'generator', 'roles')..." oninput="filterFaqList()">
+        </div>
+
+        <div class="faq-accordion" id="faq-accordion-list">
+            <!-- FAQ 1 -->
+            <div class="faq-item active">
+                <button class="faq-header" onclick="toggleFaqAccordion(this)">
+                    <span>What are Scoring Deficiency Tags and when do they appear?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-content">
+                    Scoring deficiency tags provide objective, topic-by-topic diagnostic feedback immediately following a submitted mock exam. Scores are grouped into three categories:
+                    <ul style="margin: 10px 0 10px 20px;">
+                        <li><strong style="color: var(--coral);">Deficient (&lt;60%)</strong>: Identifies topics requiring immediate remediation. Automatically creates a drill set link in your remediation queue.</li>
+                        <li><strong style="color: #D97706;">Satisfactory (60%–74%)</strong>: Indicates passing familiarity, but requires problem-solving speed improvements.</li>
+                        <li><strong style="color: var(--teal);">Proficient (75%–100%)</strong>: Meets this project's proficiency threshold.</li>
+                    </ul>
+                    To preserve exam integrity, deficiency tags are never shown during the countdown.
+                </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="faq-item">
+                <button class="faq-header" onclick="toggleFaqAccordion(this)">
+                    <span>How are Computer Engineering topics organized?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-content">
+                    The project organizes questions into six disciplines, each with five domains:
+                    <ol style="margin: 10px 0 10px 20px;">
+                        <li>Network Engineer</li>
+                        <li>Systems Operations Engineer</li>
+                        <li>Computer Systems Architect</li>
+                        <li>Software Developer</li>
+                        <li>Algorithm Engineer</li>
+                        <li>Digital Design Engineer</li>
+                    </ol>
+                    <p>See the <a href="subjects.html">Disciplines page</a> for every domain. Mock exams use the project's draft TOS weights for domains and the cognitive levels Remember, Understand, Apply, and Analyze, together with the chosen Easy, Medium, and Hard mix. These are project weights, not official PRC percentages.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="faq-item">
+                <button class="faq-header" onclick="toggleFaqAccordion(this)">
+                    <span>What can Guest, Student, Examiner, and Admin users do?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-content">
+                    <ul style="margin: 8px 0 8px 20px;">
+                        <li><strong>Guest</strong>: Anonymous practice drills only. A score is displayed in the current tab, but no account or score history is stored.</li>
+                        <li><strong>Student</strong>: Mock exams, saved results, the exam generator, remediation, and topic requests.</li>
+                        <li><strong>Examiner</strong>: Add, edit, and import question-bank items. An administrator assigns this role.</li>
+                        <li><strong>Admin</strong>: Manage accounts and roles, unlock accounts, review password requests, and oversee questions and topic requests.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FAQ 4 -->
+            <div class="faq-item">
+                <button class="faq-header" onclick="toggleFaqAccordion(this)">
+                    <span>How does the auto-balancing custom difficulty generator work?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-content">
+                    The Practice Exam page lets examinees select one or more domains within their registered discipline, a question count, time limit, and difficulty mix. Every selected domain receives questions. Difficulty is a target and may vary when the bank is short of a level. The separate Mock Exam uses the fixed 100-question domain × cognitive TOS blueprint.
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="faq.html">FAQ & Help</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="subjects.html">CpE Disciplines</a>
+                    <a href="login.html">Examinee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <a href="generator.html">Practice Exam</a>
+                    <a href="exam-history.html">Score Reports</a>
+                    <a href="remediation.html">Remediation Exams</a>
+                    <a href="test-bank.html">Admin Test Bank</a>
+                </div>
+            </div>
+            <div class="footer-programs">
+                <div class="trust-badges small">
+                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-bottom">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                info@cpedle.com
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            renderSessionNavigation(document.getElementById('nav-options-bar'));
+        });
+
+        function toggleFaqAccordion(btn) {
+            const item = btn.parentElement;
+            const wasActive = item.classList.contains('active');
+            document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
+            if (!wasActive) item.classList.add('active');
+        }
+
+        function filterFaqList() {
+            const term = document.getElementById('faq-search-input').value.toLowerCase();
+            document.querySelectorAll('.faq-item').forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(term) ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>

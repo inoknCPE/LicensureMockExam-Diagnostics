@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/auth-ui.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .signup-role-picker { display: flex; gap: 10px; margin-bottom: 20px; }
+        .signup-role-picker label { flex: 1; cursor: pointer; }
+        .signup-role-picker input { position: absolute; opacity: 0; }
+        .signup-role-picker span { display: block; padding: 10px; border: 1px solid var(--border); border-radius: 999px; text-align: center; font-weight: 600; }
+        .signup-role-picker input:checked + span { background: var(--navy); color: var(--btn-text); border-color: var(--navy); }
+        .signup-role-picker input:focus-visible + span { outline: 3px solid var(--teal); outline-offset: 2px; }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options">
+                <a class="link" href="index.html#how-it-works">HOW IT WORKS</a>
+                <a class="link" href="subjects.html">SUBJECTS</a>
+                <a class="link" href="faq.html">FAQ</a>
+                <a class="link" href="signup.html" aria-current="page">SIGN UP</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <div class="auth-wrapper">
+        <div class="card auth-card">
+            <h1 id="signup-heading">Create Student Account</h1>
+            <p id="signup-intro" style="text-align: center; color: var(--gray-text); font-size: 0.9rem; margin-bottom: 20px;">Register, then personalize your student profile.</p>
+
+            <form id="signup-form">
+                <fieldset class="signup-role-picker" style="border:0; padding:0;">
+                    <legend class="sr-only">Account type</legend>
+                    <label><input type="radio" name="account-type" value="student" checked><span>Student</span></label>
+                    <label><input type="radio" name="account-type" value="examiner"><span>Examiner</span></label>
+                </fieldset>
+                <div class="form-group">
+                    <label for="reg-name">Username</label>
+                    <input type="text" id="reg-name" placeholder="At least 8 characters" minlength="8" maxlength="30" pattern="[A-Za-z0-9_]+" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" placeholder="juan@example.com" required autocomplete="email">
+                </div>
+                <div id="examiner-fields" hidden>
+                    <div class="form-group">
+                        <label for="reg-full-name">Full Name</label>
+                        <input type="text" id="reg-full-name" minlength="2" maxlength="100" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-title">Professional Title</label>
+                        <input type="text" id="reg-title" minlength="2" maxlength="100" placeholder="Enter your professional title" autocomplete="organization-title">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-license">License Number</label>
+                        <input type="text" id="reg-license" minlength="3" maxlength="50" autocomplete="off">
+                    </div>
+                    <p style="color:var(--gray-text); font-size:0.85rem; margin-bottom:16px;">Examiner registration requires administrator approval. You cannot sign in until it is approved.</p>
+                </div>
+                <div class="form-group">
+                    <label for="reg-pass">Password <span class="password-help"><button type="button" class="password-help-trigger" aria-label="Password requirements">?</button><span class="password-tooltip" role="tooltip"></span></span></label>
+                    <input type="password" id="reg-pass" minlength="8" maxlength="30" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="reg-confirm">Confirm password</label>
+                    <input type="password" id="reg-confirm" minlength="8" maxlength="30" required autocomplete="new-password">
+                </div>
+                <label class="show-password"><input type="checkbox" id="reg-show"> Show passwords</label>
+                <div id="signup-error" style="display: none; color: var(--coral); font-size: 0.85rem; margin-bottom: 12px; font-weight: 600;"></div>
+                <button id="signup-submit" type="submit" class="btn-solid-pill" disabled>Create Student Account</button>
+            </form>
+            <p id="signup-success" role="status" hidden style="text-align:center; color:var(--dark-teal); font-weight:600;"></p>
+            <div class="auth-links">Already have an account? <a href="login.html">Log In</a></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="faq.html">FAQ & Help</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="subjects.html">CpE Disciplines</a>
+                    <a href="login.html">Examinee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <a href="generator.html">Practice Exam</a>
+                    <a href="exam-history.html">Score Reports</a>
+                    <a href="remediation.html">Remediation Exams</a>
+                    <a href="test-bank.html">Admin Test Bank</a>
+                </div>
+            </div>
+            <div class="footer-programs">
+                <div class="trust-badges small">
+                    <span class="trust-pill dark">All rights reserved © cpedle Computer Engineering Review</span>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-bottom">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                info@cpedle.com
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const accountTypeInputs = document.querySelectorAll('input[name="account-type"]');
+        const examinerFields = document.getElementById('examiner-fields');
+        const examinerInputs = ['reg-full-name', 'reg-title', 'reg-license']
+            .map(id => document.getElementById(id));
+        function updateAccountType() {
+            const examiner = document.querySelector('input[name="account-type"]:checked').value === 'examiner';
+            examinerFields.hidden = !examiner;
+            examinerInputs.forEach(input => { input.required = examiner; });
+            document.getElementById('signup-heading').textContent = examiner
+                ? 'Apply for an Examiner Account' : 'Create Student Account';
+            document.getElementById('signup-intro').textContent = examiner
+                ? 'Enter your credentials and professional details for administrator review.'
+                : 'Register, then personalize your student profile.';
+            document.getElementById('signup-submit').textContent = examiner
+                ? 'Submit Examiner Application' : 'Create Student Account';
+            document.getElementById('signup-error').style.display = 'none';
+        }
+        accountTypeInputs.forEach(input => input.addEventListener('change', updateAccountType));
+        updateAccountType();
+        setupPasswordForm({
+            passwordId: 'reg-pass', confirmId: 'reg-confirm', usernameId: 'reg-name',
+            emailId: 'reg-email', showId: 'reg-show', buttonId: 'signup-submit'
+        });
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const confirm = document.getElementById('reg-confirm').value;
+            const errBox = document.getElementById('signup-error');
+
+            const examiner = document.querySelector('input[name="account-type"]:checked').value === 'examiner';
+            const res = examiner
+                ? await CpedleDB.registerExaminer(username, email, pass, confirm,
+                    document.getElementById('reg-full-name').value.trim(),
+                    document.getElementById('reg-title').value.trim(),
+                    document.getElementById('reg-license').value.trim())
+                : await CpedleDB.register(username, email, pass, confirm);
+            if (res.success) {
+                if (examiner) {
+                    document.getElementById('signup-form').hidden = true;
+                    document.getElementById('signup-heading').textContent = 'Application Submitted';
+                    const success = document.getElementById('signup-success');
+                    success.textContent = 'Your examiner application is pending administrator approval. You can sign in after it is approved.';
+                    success.hidden = false;
+                } else {
+                    window.location.href = 'profile.html';
+                }
+            } else {
+                errBox.innerText = res.message;
+                errBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local licensure web prototype
+/databases/account_credential.sqlite3
+/app_logging/
+.setup-complete
+.env
+.env.*
+!.env.example
+/supabase/.temp/

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bank | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+    <style>
+        .bank-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+        .filter-bar { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 12px; margin-bottom: 24px; background: var(--surface); padding: 16px; border: 1px solid var(--border); border-radius: 12px; }
+        @media (max-width: 850px) { .filter-bar { grid-template-columns: 1fr; } }
+        .bank-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+        .bank-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .bank-table th, .bank-table td { padding: 14px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .bank-table th { background: color-mix(in srgb, var(--teal) 10%, var(--surface)); color: var(--navy); font-weight: 700; }
+        .bank-table tr:last-child td { border-bottom: none; }
+        .key-badge { display: inline-block; font-size: 0.78rem; color: var(--teal); font-weight: 600; margin-top: 4px; }
+        .bank-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bank-item-dialog { width: min(650px, calc(100% - 32px)); max-height: 90vh; overflow-y: auto; padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); }
+        .bank-item-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+        .bank-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .bank-form-field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
+        .bank-form-field input, .bank-form-field select, .bank-form-field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
+        @media (max-width: 600px) { .bank-form-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box" id="logo-branding">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span id="logo-text">cpedle</span>
+            </a>
+            <div class="nav__control">
+                <input type="checkbox" id="menu" class="sr-only" />
+                <label for="menu">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="sr-only">Toggle Menu</span>
+                </label>
+            </div>
+            <div class="nav__options" id="role-nav-bar"></div>
+        </div>
+    </nav>
+
+    <!-- FIXED THEME TOGGLE BUTTON -->
+    <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1-.75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clip-rule="evenodd" />
+        </svg>
+        <span class="sr-only">Toggle Theme</span>
+    </button>
+
+    <!-- TEST BANK CONTENT -->
+    <main class="container section-padding">
+        <div class="bank-toolbar">
+            <div>
+                <h1 class="serif-heading" style="font-size: 2.5rem; margin-bottom: 4px;">Computer Engineering Test Bank</h1>
+                <p style="color: var(--gray-text); font-size: 0.95rem;">Curate, filter, and review questions by Bloom's cognitive level and difficulty rating.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-outline-pill" id="btn-import">📁 Bulk Import (JSON)</button>
+                <input type="file" id="json-import-input" accept=".json,application/json" hidden>
+                <button type="button" class="btn-solid-pill" id="btn-add">+ Add New Item</button>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" id="filter-search" placeholder="Search keywords..." class="form-group" style="margin:0;">
+            <select id="filter-domain" data-taxonomy="domains" data-include-disciplines="true" style="margin:0;">
+                <option value="All">All Domains</option>
+            </select>
+            <select id="filter-diff" style="margin:0;">
+                <option value="All">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+            <select id="filter-cog" style="margin:0;">
+                <option value="All">All Cognitive Levels</option>
+                <option value="Remember">Remember</option>
+                <option value="Understand">Understand</option>
+                <option value="Apply">Apply</option>
+                <option value="Analyze">Analyze</option>
+            </select>
+        </div>
+
+        <div class="bank-table-card">
+            <table class="bank-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Item ID</th>
+                        <th>Question Preview</th>
+                        <th>Domain</th>
+                        <th style="width: 100px;">Cognitive</th>
+                        <th style="width: 100px;">Difficulty</th>
+                        <th style="width: 80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bank-table-body">
+                    <tr><td colspan="6" style="text-align: center; padding: 30px;">Loading question repository...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <dialog id="item-modal" class="bank-item-dialog" aria-labelledby="modal-title">
+        <h2 class="serif-heading" id="modal-title">Add Test Item</h2>
+        <p id="item-review-note" style="margin: 8px 0 18px; color: var(--gray-text);"></p>
+        <form id="item-form">
+            <input type="hidden" id="item-id">
+            <input type="hidden" id="item-type" value="multiple_choice">
+            <input type="hidden" id="item-choice-count" value="4">
+            <label class="bank-form-field">Question Text<textarea id="item-q" rows="3" required maxlength="2000"></textarea></label>
+            <p id="item-format-note" style="color: var(--gray-text); font-size: 0.85rem;"></p>
+            <div class="bank-form-grid" id="item-choice-fields">
+                <label class="bank-form-field" id="item-option-field-0">Option A<input id="item-opt0" required maxlength="500"></label>
+                <label class="bank-form-field" id="item-option-field-1">Option B<input id="item-opt1" required maxlength="500"></label>
+                <label class="bank-form-field" id="item-option-field-2">Option C<input id="item-opt2" required maxlength="500"></label>
+                <label class="bank-form-field" id="item-option-field-3">Option D<input id="item-opt3" required maxlength="500"></label>
+                <label class="bank-form-field" id="item-fifth-option" hidden>Option E<input id="item-opt4" maxlength="500"></label>
+            </div>
+            <div class="bank-form-grid">
+                <label class="bank-form-field" id="item-key-field">Correct Key<select id="item-ans" required><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option><option id="item-answer-e" value="4">E</option></select></label>
+                <label class="bank-form-field">Difficulty<select id="item-diff" required><option>Easy</option><option>Medium</option><option>Hard</option></select></label>
+                <label class="bank-form-field">Cognitive Level<select id="item-cog" required><option>Remember</option><option>Understand</option><option>Apply</option><option>Analyze</option></select></label>
+                <label class="bank-form-field">Domain<select id="item-domain" data-taxonomy="domains" required></select></label>
+            </div>
+            <label class="bank-form-field" id="item-text-answer-field" hidden>Accepted Identification Answer<input id="item-answer-text" maxlength="500"></label>
+            <label class="bank-form-field">Explanation (Optional)<textarea id="item-exp" rows="2"></textarea></label>
+            <div class="bank-actions" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn-outline-pill" id="item-cancel">Cancel</button>
+                <button type="submit" class="btn-solid-pill" id="item-save">Save Item</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- FOOTER -->
+    <footer class="footer bg-white">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                All rights reserved © cpedle Computer Engineering Review
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['EXAMINER', 'ADMIN']);
+            const user = CpedleDB.getCurrentUser();
+
+            // Correct logo text according to logged in role
+            const logoText = document.getElementById('logo-text');
+            const logoBranding = document.getElementById('logo-branding');
+            if (user.role === 'EXAMINER') {
+                logoText.innerHTML = 'cpedle <em>Examiner</em>';
+                logoBranding.href = 'examiner-dashboard.html';
+            } else if (user.role === 'ADMIN') {
+                logoText.innerHTML = 'cpedle <em>Admin</em>';
+                logoBranding.href = 'admin-dashboard.html';
+            }
+
+            renderSessionNavigation(document.getElementById('role-nav-bar'), 'test-bank.html');
+            renderTable();
+
+            document.getElementById('filter-search').addEventListener('input', renderTable);
+            document.getElementById('filter-domain').addEventListener('change', renderTable);
+            document.getElementById('filter-diff').addEventListener('change', renderTable);
+            document.getElementById('filter-cog').addEventListener('change', renderTable);
+            document.getElementById('btn-add').addEventListener('click', () => openItemModal());
+            document.getElementById('btn-import').addEventListener('click', () => document.getElementById('json-import-input').click());
+            document.getElementById('json-import-input').addEventListener('change', handleBulkImport);
+            document.getElementById('item-cancel').addEventListener('click', () => document.getElementById('item-modal').close());
+            document.getElementById('item-form').addEventListener('submit', saveItem);
+            document.getElementById('bank-table-body').addEventListener('click', event => {
+                const button = event.target.closest('button[data-action]');
+                if (!button) return;
+                const id = button.dataset.id;
+                if (button.dataset.action === 'edit') openItemModal(id);
+                if (button.dataset.action === 'delete') deleteItem(id);
+            });
+        });
+
+        function renderTable() {
+            const body = document.getElementById('bank-table-body');
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const domain = document.getElementById('filter-domain').value;
+            const diff = document.getElementById('filter-diff').value;
+            const cog = document.getElementById('filter-cog').value;
+
+            let questions = CpedleDB.getQuestions();
+
+            if (search) {
+                questions = questions.filter(q => q.q.toLowerCase().includes(search) || (q.id && q.id.toLowerCase().includes(search)));
+            }
+            if (domain !== 'All') {
+                questions = questions.filter(q => q.domain === domain || (DISCIPLINES[domain] || []).includes(q.domain));
+            }
+            if (diff !== 'All') {
+                questions = questions.filter(q => q.difficulty === diff);
+            }
+            if (cog !== 'All') {
+                questions = questions.filter(q => q.cognitive === cog);
+            }
+
+            if (!questions.length) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--gray-text);">No matching questions found in the bank.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = questions.map(q => {
+                const correctOpt = Array.isArray(q.opts) && Number.isInteger(q.ans) ? q.opts[q.ans] : '';
+                const answerLabel = q.questionType === 'identification'
+                    ? `Accepted answer: ${escapeHtml(q.answerText || '')}`
+                    : Number.isInteger(q.ans) ? `Key: ${'ABCDE'[q.ans] || '?'} (${escapeHtml(correctOpt)})` : '';
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(q.id || 'AUTO')}</strong></td>
+                        <td>
+                            <div>${escapeHtml(q.q)}</div>
+                            <span class="key-badge">${answerLabel}</span>
+                        </td>
+                        <td>${escapeHtml(q.domain || '-')}</td>
+                        <td>${escapeHtml(q.cognitive || '-')}</td>
+                        <td><span class="deficiency-tag ${q.difficulty === 'Easy' ? 'tag-proficient' : q.difficulty === 'Medium' ? 'tag-satisfactory' : 'tag-deficient'}">${escapeHtml(q.difficulty || '-')}</span></td>
+                        <td>
+                            <div class="bank-actions">
+                                <button type="button" class="btn-outline-pill" data-action="edit" data-id="${escapeHtml(q.id)}">Edit</button>
+                                <button type="button" class="btn-outline-pill" data-action="delete" data-id="${escapeHtml(q.id)}">Delete</button>
+                            </div></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openItemModal(id = null) {
+            const form = document.getElementById('item-form');
+            form.reset();
+            const q = id ? CpedleDB.getQuestions().find(item => item.id === id) : null;
+            if (id && !q) return;
+            document.getElementById('modal-title').textContent = q ? `Edit Test Item ${id}` : 'Add Test Item';
+            document.getElementById('item-review-note').textContent = CpedleDB.getCurrentUser().role === 'EXAMINER'
+                ? 'Your change will be submitted for administrator approval.'
+                : 'Administrator changes take effect immediately.';
+            document.getElementById('item-id').value = q?.id || '';
+            const kind = q?.questionType || 'multiple_choice';
+            const choiceCount = q?.opts?.length || 4;
+            document.getElementById('item-type').value = kind;
+            document.getElementById('item-choice-count').value = String(choiceCount);
+            document.getElementById('item-format-note').textContent = q?.source === 'imported'
+                ? `Imported ${kind.replace('_', ' / ')} item. Its format and images are retained.` : '';
+            const hasChoices = kind !== 'identification';
+            document.getElementById('item-choice-fields').hidden = !hasChoices;
+            document.getElementById('item-key-field').hidden = !hasChoices;
+            document.getElementById('item-fifth-option').hidden = choiceCount < 5;
+            document.getElementById('item-text-answer-field').hidden = kind === 'multiple_choice';
+            for (let index = 0; index < 5; index++) {
+                document.getElementById(`item-opt${index}`).required = hasChoices && index < choiceCount;
+                document.getElementById(index === 4 ? 'item-fifth-option' : `item-option-field-${index}`).hidden = !hasChoices || index >= choiceCount;
+            }
+            document.getElementById('item-ans').required = hasChoices;
+            document.getElementById('item-answer-text').required = kind !== 'multiple_choice';
+            document.getElementById('item-answer-e').disabled = choiceCount < 5;
+            if (q) {
+                document.getElementById('item-q').value = q.q;
+                q.opts.forEach((option, index) => { document.getElementById(`item-opt${index}`).value = option; });
+                document.getElementById('item-ans').value = String(q.ans);
+                document.getElementById('item-answer-text').value = q.answerText || '';
+                document.getElementById('item-diff').value = q.difficulty;
+                document.getElementById('item-cog').value = q.cognitive;
+                document.getElementById('item-domain').value = q.domain;
+                document.getElementById('item-exp').value = q.explanation || '';
+            }
+            document.getElementById('item-modal').showModal();
+        }
+
+        async function saveItem(event) {
+            event.preventDefault();
+            const saveButton = document.getElementById('item-save');
+            const value = id => document.getElementById(id).value;
+            const data = {
+                id: value('item-id') || null,
+                q: value('item-q').trim(),
+                opts: value('item-type') === 'identification' ? [] :
+                    [0, 1, 2, 3, 4].filter(index => index < Number(value('item-choice-count')))
+                        .map(index => value(`item-opt${index}`).trim()),
+                ans: value('item-type') === 'identification' ? null : Number(value('item-ans')),
+                answerText: value('item-answer-text').trim(), questionType: value('item-type'),
+                difficulty: value('item-diff'), cognitive: value('item-cog'),
+                domain: value('item-domain'), explanation: value('item-exp').trim()
+            };
+            if (CpedleDB.getCurrentUser().role === 'EXAMINER' && !await confirmActionDialog({
+                message: `Submit this ${data.id ? 'edit' : 'new item'} for question approval? It will not change the live test bank until an administrator approves it.`,
+                confirmLabel: 'Yes, Submit Request'
+            })) return;
+            saveButton.disabled = true;
+            try {
+                const result = await CpedleDB.saveQuestion(data);
+                document.getElementById('item-modal').close();
+                renderTable();
+                if (result.pending) alert('Question submitted for administrator approval. Track it in Question Submissions.');
+            } catch (error) {
+                alert('Could not save question: ' + error.message);
+            } finally {
+                saveButton.disabled = false;
+            }
+        }
+
+        async function deleteItem(id) {
+            const pending = CpedleDB.getCurrentUser().role === 'EXAMINER';
+            const prompt = pending
+                ? `Submit a request to delete question ${id}? The question will remain until an admin approves.`
+                : `Are you sure you want to permanently delete question ${id}?`;
+            if (!await confirmActionDialog({
+                message: prompt,
+                confirmLabel: pending ? 'Yes, Submit Request' : 'Yes, Delete'
+            })) return;
+            try {
+                const result = await CpedleDB.deleteQuestion(id);
+                renderTable();
+                if (result.pending) alert('Deletion submitted for administrator approval. Track it in Question Submissions.');
+            } catch (error) {
+                alert('Could not delete question: ' + error.message);
+            }
+        }
+
+        async function handleBulkImport(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+                const items = JSON.parse(await file.text());
+                if (!Array.isArray(items)) throw new Error('The JSON file must contain an array of questions.');
+                const result = await CpedleDB.bulkImport(items);
+                renderTable();
+                alert(result.pending
+                    ? `${result.pending} questions submitted for administrator approval.`
+                    : `${result.added} questions imported.`);
+            } catch (error) {
+                alert('Import failed: ' + error.message);
+            } finally {
+                event.target.value = '';
+            }
+        }
+    </script>
+</body>
+</html>
