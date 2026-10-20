@@ -20,6 +20,7 @@ DEFAULT_SOURCE = ROOT / "databases" / "account_credential.sqlite3"
 DEFAULT_BANK_SOURCE = ROOT / "databases" / "questionbank.db"
 TABLES = (
     "users",
+    "email_verification_tokens",
     "questions",
     "password_reset_requests",
     "imported_question_overrides",
@@ -44,6 +45,7 @@ IDENTITY_TABLES = (
     *BANK_TABLES,
 )
 ALL_TABLES = ("sessions", *TABLES, *BANK_TABLES)
+OPTIONAL_LOCAL_TABLES = {"email_verification_tokens"}
 BATCH_SIZE = 500
 
 
@@ -61,7 +63,7 @@ def source_counts(source: Path, bank_source: Path = DEFAULT_BANK_SOURCE) -> dict
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        missing = {"sessions", *TABLES} - existing
+        missing = {"sessions", *TABLES} - existing - OPTIONAL_LOCAL_TABLES
         if missing:
             raise RuntimeError(
                 "The local database schema is outdated or incomplete; "
@@ -69,7 +71,10 @@ def source_counts(source: Path, bank_source: Path = DEFAULT_BANK_SOURCE) -> dict
                 "Start the local app once to apply its schema updates, then retry."
             )
         counts = {
-            table: connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+            table: (
+                connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+                if table in existing else 0
+            )
             for table in ("sessions", *TABLES)
         }
     with closing(sqlite3.connect(
@@ -97,6 +102,13 @@ def source_counts(source: Path, bank_source: Path = DEFAULT_BANK_SOURCE) -> dict
 def read_source_rows(
     source_connection: sqlite3.Connection, table: str
 ) -> tuple[list[str], list[tuple[object, ...]]]:
+    existing = {
+        row[0] for row in source_connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+    }
+    if table == "email_verification_tokens" and table not in existing:
+        return ["user_id", "token_hash", "expires_at", "sent_at"], []
     cursor = source_connection.execute(f'SELECT * FROM "{table}"')
     columns = [item[0] for item in cursor.description]
     return columns, cursor.fetchall()

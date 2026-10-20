@@ -20,6 +20,7 @@ class SupabaseMigrationTests(unittest.TestCase):
             set(migration.TABLES),
             {
                 "users",
+                "email_verification_tokens",
                 "questions",
                 "password_reset_requests",
                 "imported_question_overrides",
@@ -52,6 +53,7 @@ class SupabaseMigrationTests(unittest.TestCase):
         self.assertIn("revoke all on all tables in schema public from anon, authenticated;", schema)
         self.assertIn("opts_json text not null", schema)
         self.assertIn("answers_json text not null default '{}'", schema)
+        self.assertIn("email_verified", schema)
 
     def test_postgres_query_adapter_preserves_question_marks_in_strings(self):
         from backend import _postgres_placeholders

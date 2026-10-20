@@ -13,6 +13,10 @@ Set `SUPABASE_DB_URL` in the ignored root `.env` file to use Supabase. Without
 it, the backend uses local SQLite. See [LOCALHOST.md](LOCALHOST.md) for setup,
 database migration, and development details.
 
+Account registration requires an email verification link. See
+[LOCALHOST.md](LOCALHOST.md#email-verification-with-brevo) to configure Brevo
+and apply the Supabase migration.
+
 ## Project layout
 
 - `pages/` — HTML pages

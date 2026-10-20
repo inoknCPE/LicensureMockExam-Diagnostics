@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="card auth-card">
+            <h1>Email Verification</h1>
+            <p id="verification-status" role="status" style="text-align:center; color:var(--gray-text);">
+                Enter your email below to request a verification link.
+            </p>
+            <form id="verify-form" hidden>
+                <button class="btn-solid-pill" type="submit">Verify email address</button>
+            </form>
+            <form id="resend-form">
+                <p style="text-align:center; color:var(--gray-text);">You can request a new link if yours expired or did not arrive.</p>
+                <div class="form-group">
+                    <label for="verification-email">Email address</label>
+                    <input type="email" id="verification-email" required autocomplete="email">
+                </div>
+                <div id="resend-status" role="status" style="display:none; margin-bottom:12px;"></div>
+                <button class="btn-solid-pill" type="submit">Send verification email</button>
+            </form>
+            <div class="auth-links"><a href="login.html">Return to Log In</a></div>
+        </div>
+    </div>
+    <script>
+        const status = document.getElementById('verification-status');
+        const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+        const verifyForm = document.getElementById('verify-form');
+        if (token) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+            status.textContent = 'Click below to confirm that you can access this email address.';
+            verifyForm.hidden = false;
+        }
+
+        verifyForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = verifyForm.querySelector('button');
+            button.disabled = true;
+            try {
+                const result = await CpedleDB.verifyEmail(token);
+                status.textContent = result.message;
+                verifyForm.hidden = true;
+            } catch (error) {
+                status.textContent = error.message;
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('resend-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const message = document.getElementById('resend-status');
+            message.style.display = 'block';
+            try {
+                const result = await CpedleDB.resendVerification(
+                    document.getElementById('verification-email').value.trim()
+                );
+                message.textContent = result.message;
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>

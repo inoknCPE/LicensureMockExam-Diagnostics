@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from email.utils import parseaddr
 import hashlib
 import hmac
+import html
 import json
 import logging
 import os
@@ -12,9 +14,11 @@ import secrets
 import sqlite3
 import time
 from contextlib import contextmanager
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.request import Request as UrlRequest, urlopen
 from pathlib import Path
 from typing import Iterator
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -38,7 +42,7 @@ REQUIRED_DATABASE_TABLES = {
     "users", "sessions", "password_reset_requests", "questions",
     "imported_question_overrides", "question_change_requests",
     "exam_history", "licensure_attempts", "requests",
-    "bank_questions", "bank_choices", "bank_accepted_answers",
+    "email_verification_tokens", "bank_questions", "bank_choices", "bank_accepted_answers",
     "bank_domains", "bank_disciplines",
 }
 SESSION_SECONDS = 12 * 60 * 60
@@ -261,6 +265,7 @@ def bank_image_url(path: str | None) -> str | None:
 def initialize() -> None:
     global DATABASE_URL, USING_OFFLINE_FALLBACK
     if DATABASE_URL:
+        now = int(time.time())
         try:
             with db() as connection:
                 rows = connection.execute(
@@ -305,6 +310,7 @@ def initialize() -> None:
                 examiner_reviewed_by INTEGER REFERENCES users(id),
                 invalid_attempts INTEGER NOT NULL DEFAULT 0,
                 is_locked INTEGER NOT NULL DEFAULT 0,
+                email_verified INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS sessions (
@@ -322,6 +328,12 @@ def initialize() -> None:
                 requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 reviewed_at TEXT,
                 reviewed_by INTEGER REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at INTEGER NOT NULL,
+                sent_at INTEGER NOT NULL
             );
             CREATE UNIQUE INDEX IF NOT EXISTS one_pending_reset
                 ON password_reset_requests(user_id) WHERE status = 'pending';
@@ -423,6 +435,10 @@ def initialize() -> None:
             connection.execute("ALTER TABLE question_change_requests ADD COLUMN rejection_reason TEXT NOT NULL DEFAULT ''")
         # Existing accounts predate examiner applications and remain approved.
         user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+        if "email_verified" not in user_columns:
+            connection.execute(
+                "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1"
+            )
         if "professional_title" not in user_columns:
             connection.execute("ALTER TABLE users ADD COLUMN professional_title TEXT NOT NULL DEFAULT ''")
             if "license_number" in user_columns:
@@ -553,6 +569,7 @@ def public_user(row: sqlite3.Row) -> dict:
         "name": row["name"], "role": row["role"], "discipline": row["discipline"],
         "professionalTitle": row["professional_title"],
         "licenseNumber": row["license_number"],
+        "emailVerified": bool(row["email_verified"]),
     }
 
 
@@ -566,6 +583,7 @@ def current_session(request: Request) -> tuple[dict, str] | None:
             SELECT u.*, s.csrf_token FROM sessions s
             JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_locked = 0
+              AND u.email_verified = 1
               AND (u.role != 'EXAMINER' OR u.examiner_status = 'approved')
         """, (token_hash, int(time.time()))).fetchone()
     return (public_user(row), row["csrf_token"]) if row else None
@@ -611,6 +629,79 @@ def require_same_origin(request: Request) -> None:
         raise HTTPException(403, "Cross-origin request rejected.")
 
 
+def _create_verification_token(connection, user_id: int, now: int) -> str:
+    token = secrets.token_urlsafe(32)
+    connection.execute(
+        """INSERT INTO email_verification_tokens(user_id,token_hash,expires_at,sent_at)
+           VALUES(?,?,?,?)
+           ON CONFLICT(user_id) DO UPDATE SET
+               token_hash=excluded.token_hash,
+               expires_at=excluded.expires_at,
+               sent_at=excluded.sent_at""",
+        (user_id, hashlib.sha256(token.encode()).hexdigest(), now + 24 * 60 * 60, now),
+    )
+    return token
+
+
+def send_verification_email(email: str, token: str) -> None:
+    api_key = os.environ.get("BREVO_API_KEY", "").strip()
+    sender = os.environ.get("BREVO_FROM_EMAIL", "").strip()
+    if not api_key or not sender:
+        raise HTTPException(
+            503,
+            "Email verification is not configured. Set BREVO_API_KEY and BREVO_FROM_EMAIL, then try again.",
+        )
+    sender_name, sender_email = parseaddr(sender)
+    if not sender_email or "@" not in sender_email:
+        raise HTTPException(503, "BREVO_FROM_EMAIL must be a valid verified sender address.")
+    app_url = os.environ.get("PUBLIC_APP_URL", "http://127.0.0.1:5000").rstrip("/")
+    verify_url = f"{app_url}/verify-email.html#token={token}"
+    escaped_url = html.escape(verify_url, quote=True)
+    escaped_email = html.escape(email)
+    sender_details = {"email": sender_email}
+    if sender_name:
+        sender_details["name"] = sender_name
+    payload = json.dumps({
+        "sender": sender_details,
+        "to": [{"email": email}],
+        "subject": "Verify your cpedle email address",
+        "textContent": (
+            "Verify your email address to finish creating your cpedle account.\n\n"
+            f"Open this link to verify: {verify_url}\n\n"
+            "This link expires in 24 hours. If you did not create an account, "
+            "you can ignore this message."
+        ),
+        "htmlContent": (
+            "<p>Verify your email address to finish creating your cpedle account.</p>"
+            f'<p><a href="{escaped_url}">Verify email address</a></p>'
+            "<p>This link expires in 24 hours. If you did not create an account, "
+            "you can ignore this message.</p>"
+            f"<p>Sent to {escaped_email}.</p>"
+        ),
+    }).encode()
+    request = UrlRequest(
+        "https://api.brevo.com/v3/smtp/email",
+        data=payload,
+        headers={
+            "api-key": api_key,
+            "accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            if response.status not in {200, 201, 202}:
+                logging.error("Brevo rejected verification email with HTTP %s", response.status)
+                raise HTTPException(502, "The verification email could not be sent. Please try again.")
+    except HTTPError as error:
+        logging.error("Brevo rejected verification email with HTTP %s", error.code)
+        raise HTTPException(502, "The verification email could not be sent. Please try again.") from None
+    except (URLError, TimeoutError) as error:
+        logging.error("Could not reach Brevo to send verification email: %s", error)
+        raise HTTPException(502, "The verification email could not be sent. Please try again.") from None
+
+
 class RegisterIn(BaseModel):
     username: str
     email: str
@@ -627,6 +718,14 @@ class ExaminerRegisterIn(RegisterIn):
 class LoginIn(BaseModel):
     identifier: str
     password: str
+
+
+class VerifyEmailIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+
+
+class EmailVerificationResendIn(BaseModel):
+    email: str
 
 
 class ResetIn(BaseModel):
@@ -759,16 +858,16 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
                 field = "Username" if existing["username"].casefold() == username.casefold() else "Email"
                 raise HTTPException(409, f"{field} is already registered.")
             cursor = connection.execute(
-                "INSERT INTO users(username,email,password_hash,role) "
-                "VALUES(?,?,?,'STUDENT') RETURNING id",
+                "INSERT INTO users(username,email,password_hash,role,email_verified) "
+                "VALUES(?,?,?,'STUDENT',0) RETURNING id",
                 (username, email, hash_password(payload.password)),
             )
             user_id = cursor.fetchone()["id"]
+            token = _create_verification_token(connection, user_id, int(time.time()))
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username or email is already registered.") from None
-    _, csrf = set_session(response, user_id, request.url.scheme == "https")
-    return {"user": {"id": user_id, "username": username, "email": email,
-                     "role": "STUDENT", "name": "", "discipline": ""}, "csrf": csrf}
+    send_verification_email(email, token)
+    return {"message": "Account created. Check your email for a verification link."}
 
 
 @router.post("/auth/register-examiner")
@@ -789,6 +888,7 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
     license_number = payload.license_number.strip()
     if len(license_number) < 3 or len(license_number) > 50 or any(ord(char) < 32 for char in license_number):
         raise HTTPException(422, "Enter a valid license number (3–50 characters).")
+    now = int(time.time())
     try:
         with db() as connection:
             if connection.execute("SELECT 1 FROM users WHERE lower(username)=lower(?)",
@@ -800,14 +900,63 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
             if connection.execute("SELECT 1 FROM users WHERE lower(license_number)=lower(?)",
                                   (license_number,)).fetchone():
                 raise HTTPException(409, "License number is already registered.")
-            connection.execute(
-                "INSERT INTO users(username,email,password_hash,role,name,professional_title,license_number,examiner_status) "
-                "VALUES(?,?,?,'EXAMINER',?,?,?,'pending')",
+            cursor = connection.execute(
+                "INSERT INTO users(username,email,password_hash,role,name,professional_title,license_number,examiner_status,email_verified) "
+                "VALUES(?,?,?,'EXAMINER',?,?,?,'pending',0) RETURNING id",
                 (username, email, hash_password(payload.password), name, title, license_number),
             )
+            user_id = cursor.fetchone()["id"]
+            token = _create_verification_token(connection, user_id, now)
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username, email, or license number is already registered.") from None
-    return {"message": "Examiner registration submitted for administrator approval."}
+    send_verification_email(email, token)
+    return {"message": "Application submitted. Verify your email; administrator review follows."}
+
+
+@router.post("/auth/verify-email")
+def verify_email(payload: VerifyEmailIn, request: Request) -> dict:
+    require_same_origin(request)
+    now = int(time.time())
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    with db() as connection:
+        token_row = connection.execute(
+            "SELECT user_id,expires_at FROM email_verification_tokens WHERE token_hash=?",
+            (token_hash,),
+        ).fetchone()
+        if not token_row or token_row["expires_at"] <= now:
+            raise HTTPException(400, "This verification link is invalid or expired. Request a new one.")
+        connection.execute("UPDATE users SET email_verified=1 WHERE id=?", (token_row["user_id"],))
+        connection.execute("DELETE FROM email_verification_tokens WHERE user_id=?", (token_row["user_id"],))
+    return {"message": "Email verified. You can now sign in."}
+
+
+@router.post("/auth/resend-verification")
+def resend_verification(payload: EmailVerificationResendIn, request: Request) -> dict:
+    require_same_origin(request)
+    email = validate_email(payload.email)
+    now = int(time.time())
+    message = (
+        "If an unverified account exists for that address, a verification email may be sent. "
+        "If you do not receive one, try again in a minute."
+    )
+    with db() as connection:
+        user = connection.execute(
+            "SELECT id,email,email_verified FROM users WHERE lower(email)=lower(?)"
+            + (" FOR UPDATE" if DATABASE_URL else ""),
+            (email,),
+        ).fetchone()
+        if not user or user["email_verified"]:
+            return {"message": message}
+        previous = connection.execute(
+            "SELECT sent_at FROM email_verification_tokens WHERE user_id=?",
+            (user["id"],),
+        ).fetchone()
+        if previous and previous["sent_at"] > now - 60:
+            return {"message": message}
+        token = _create_verification_token(connection, user["id"], now)
+        recipient = user["email"]
+    send_verification_email(recipient, token)
+    return {"message": message}
 
 
 @router.post("/auth/login")
@@ -841,6 +990,11 @@ def login(payload: LoginIn, request: Request, response: Response) -> dict:
                 raise HTTPException(423, "Account locked after 3 invalid attempts.")
             raise HTTPException(401, f"Invalid username/email or password. {MAX_ATTEMPTS-attempts} attempt(s) remaining.")
         connection.execute("UPDATE users SET invalid_attempts=0 WHERE id=?", (row["id"],))
+    if not row["email_verified"]:
+        raise HTTPException(
+            403,
+            "Verify your email before signing in. Use the verification page to request another link.",
+        )
     if row["role"] == "EXAMINER" and row["examiner_status"] != "approved":
         message = ("Your examiner registration is awaiting administrator approval." if
                    row["examiner_status"] == "pending" else

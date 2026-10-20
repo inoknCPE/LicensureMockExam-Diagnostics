@@ -106,7 +106,8 @@
                 <button id="signup-submit" type="submit" class="btn-solid-pill" disabled>Create Student Account</button>
             </form>
             <p id="signup-success" role="status" hidden style="text-align:center; color:var(--dark-teal); font-weight:600;"></p>
-            <div class="auth-links">Already have an account? <a href="login.html">Log In</a></div>
+            <div class="auth-links">Already have an account? <a href="login.html">Log In</a><br>
+                Need a verification email? <a href="verify-email.html">Resend it</a></div>
         </div>
     </div>
 
@@ -183,15 +184,11 @@
                     document.getElementById('reg-license').value.trim())
                 : await CpedleDB.register(username, email, pass, confirm);
             if (res.success) {
-                if (examiner) {
-                    document.getElementById('signup-form').hidden = true;
-                    document.getElementById('signup-heading').textContent = 'Application Submitted';
-                    const success = document.getElementById('signup-success');
-                    success.textContent = 'Your examiner application is pending administrator approval. You can sign in after it is approved.';
-                    success.hidden = false;
-                } else {
-                    window.location.href = 'profile.html';
-                }
+                document.getElementById('signup-form').hidden = true;
+                document.getElementById('signup-heading').textContent = 'Check Your Email';
+                const success = document.getElementById('signup-success');
+                success.textContent = res.message;
+                success.hidden = false;
             } else {
                 errBox.innerText = res.message;
                 errBox.style.display = 'block';

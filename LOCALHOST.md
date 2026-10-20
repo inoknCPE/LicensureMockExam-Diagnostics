@@ -25,14 +25,57 @@ environment's Python executable directly.
 After setup, run `create-admin.bat` (or `.\.venv\Scripts\python.exe manage.py`).
 Enter an 8–30 character username, valid email format, and an 8–30 character
 password containing a letter, uppercase letter, number, and special character.
-This local-only command works once. Public registration always creates a
-Student account; the administrator can assign Examiner or Admin roles from
-`admin-accounts.html`.
+This local-only command works once. Public registration creates Student
+accounts or pending Examiner applications; only administrators can assign
+Admin roles from `admin-accounts.html`.
 Administrators go directly to the admin dashboard and cannot be sent to the
 discipline profile page. Student and Examiner profiles require a discipline.
 The Student/Examiner Profile page displays the saved sign-in email and lets
-its owner correct it after entering the current password. Email ownership
-is still not verified.
+its owner correct it after entering the current password.
+
+## Email verification with Brevo
+
+New Student and Examiner registrations send a verification link through
+Brevo's transactional email API over HTTPS. A Student cannot sign in before verifying. An Examiner can verify
+their email while the application waits for administrator approval. Existing
+accounts are treated as verified during the database migration.
+
+1. In Brevo, add and verify the sender address you intend to use. For best
+   deliverability, authenticate its sending domain if you control the DNS.
+2. Create a Brevo **API key** with permission to send transactional emails.
+   The app calls Brevo over HTTPS, so it does not need SMTP credentials.
+3. In the ignored root `.env` file, set:
+
+   ```dotenv
+   BREVO_API_KEY=your_brevo_api_key
+   BREVO_FROM_EMAIL=cpedle <your-verified-sender@example.com>
+   PUBLIC_APP_URL=http://127.0.0.1:5000
+   ```
+
+   Replace these examples with your actual Brevo API key and verified sender
+   address. Keep `.env` private; never commit or paste the API key into source
+   code. The local URL works only when the email link is opened on the
+   computer running the application.
+4. Restart the app after changing `.env`, then register with an inbox you can
+   access. The verification link expires after 24 hours. The verification
+   page can request another link, with a one-minute cooldown per account.
+5. For a deployed app, configure these same values in the hosting provider's
+   environment-variable settings. Set `PUBLIC_APP_URL` to the app's public
+   HTTPS origin (for example, `https://your-app.example.com`), not localhost.
+   Do not commit `.env` or put the Brevo API key in browser JavaScript.
+6. If the app uses Supabase, apply the new schema migration before deploying
+   the code:
+
+   ```powershell
+   npx supabase db push
+   ```
+
+The HTTPS API works with Render's outbound network rules, including its
+restriction on SMTP ports for Free web services. Check Brevo's transactional
+email logs if a test message does not arrive.
+Inbox delivery can be affected by domain reputation, recipient filtering, or
+provider limits. A user can request a fresh link from the verification page
+or the login/sign-up pages.
 
 Examiner additions, edits, and bulk imports go to an administrator approval
 queue. They do not affect the active question bank until approved at
@@ -112,8 +155,8 @@ At this milestone, the server stores password hashes (not passwords) and uses
 an HttpOnly session cookie. Three failed logins lock an account. The
 administrator can unlock it or review a proposed password reset. A reset
 request does **not** verify email ownership; the administrator must confirm
-identity outside the app before approval. Email syntax is checked, but no
-verification email is sent.
+identity outside the app before approval. New public registrations must verify
+email ownership; existing accounts are grandfathered as verified.
 
 The local accounts/results database is created automatically at
 `databases/account_credential.sqlite3` and is ignored by Git. The committed

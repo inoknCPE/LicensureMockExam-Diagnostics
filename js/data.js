@@ -514,8 +514,7 @@ const CpedleDB = {
                     username, email, password, confirm_password: confirmPassword
                 })
             });
-            await refreshBootstrap();
-            return { success: true, user: result.user };
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -532,6 +531,16 @@ const CpedleDB = {
         } catch (error) {
             return { success: false, message: error.message };
         }
+    },
+    async verifyEmail(token) {
+        return apiCall('/auth/verify-email', {
+            method: 'POST', body: JSON.stringify({ token })
+        });
+    },
+    async resendVerification(email) {
+        return apiCall('/auth/resend-verification', {
+            method: 'POST', body: JSON.stringify({ email })
+        });
     },
     async requestPasswordReset(identifier, password, confirmPassword) {
         return apiCall('/auth/reset-request', {

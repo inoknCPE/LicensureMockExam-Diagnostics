@@ -1,5 +1,6 @@
 """Direct backend tests; no HTTP test client dependency is required."""
 
+import json
 import os
 import sys
 import tempfile
@@ -86,6 +87,10 @@ class AccessTests(unittest.TestCase):
     def test_pages_are_served_from_pages_directory(self):
         self.assertEqual(Path(home_page().path), ROOT / "pages" / "index.html")
         self.assertEqual(Path(html_page("faq", request()).path), ROOT / "pages" / "faq.html")
+        self.assertEqual(
+            Path(html_page("verify-email", request()).path),
+            ROOT / "pages" / "verify-email.html",
+        )
 
     def test_password_length_allows_thirty_but_not_thirty_one_characters(self):
         backend.validate_password("A" + "a" * 27 + "@1")
@@ -103,10 +108,16 @@ class AccessTests(unittest.TestCase):
         self.temp.cleanup()
 
     def register_student(self):
+        with patch.object(backend, "send_verification_email") as send_email:
+            backend.register(backend.RegisterIn(
+                username="student01", email="student@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+            ), request(method="POST"), Response())
+        backend.verify_email(backend.VerifyEmailIn(token=send_email.call_args.args[1]),
+                             request(method="POST"))
         response = Response()
-        result = backend.register(backend.RegisterIn(
-            username="student01", email="student@example.com",
-            password="Valid@123", confirm_password="Valid@123",
+        result = backend.login(backend.LoginIn(
+            identifier="student@example.com", password="Valid@123",
         ), request(method="POST"), response)
         cookie = response.headers["set-cookie"].split(";", 1)[0]
         return result, cookie
@@ -119,16 +130,20 @@ class AccessTests(unittest.TestCase):
         return result, response.headers["set-cookie"].split(";", 1)[0]
 
     def register_examiner(self, username="examiner01", license_number="PRC-12345"):
-        return backend.register_examiner(backend.ExaminerRegisterIn(
-            username=username, email=f"{username}@example.com",
-            password="Valid@123", confirm_password="Valid@123",
-            name="Examiner Example", title="Licensed Professional Teacher",
-            license_number=license_number,
-        ), request(method="POST"))
+        with patch.object(backend, "send_verification_email") as send_email:
+            result = backend.register_examiner(backend.ExaminerRegisterIn(
+                username=username, email=f"{username}@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+                name="Examiner Example", title="Licensed Professional Teacher",
+                license_number=license_number,
+            ), request(method="POST"))
+        backend.verify_email(backend.VerifyEmailIn(token=send_email.call_args.args[1]),
+                             request(method="POST"))
+        return result
 
     def test_examiner_registration_requires_admin_approval(self):
         submitted = self.register_examiner()
-        self.assertIn("administrator approval", submitted["message"])
+        self.assertIn("administrator review", submitted["message"])
         with backend.db() as connection:
             row = connection.execute(
                 "SELECT id,role,name,discipline,professional_title,license_number,examiner_status FROM users WHERE username=?",
@@ -230,6 +245,114 @@ class AccessTests(unittest.TestCase):
         self.assertEqual(
             backend.require_user(request(cookie, method="POST", csrf=student["csrf"]))["role"],
             "STUDENT",
+        )
+
+    def test_student_registration_requires_single_use_email_verification(self):
+        with patch.object(backend, "send_verification_email") as send_email:
+            result = backend.register(backend.RegisterIn(
+                username="student01", email="student@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+            ), request(method="POST"), Response())
+        self.assertIn("Check your email", result["message"])
+        token = send_email.call_args.args[1]
+        with backend.db() as connection:
+            user = connection.execute(
+                "SELECT id,email_verified FROM users WHERE username='student01'"
+            ).fetchone()
+            self.assertEqual(user["email_verified"], 0)
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM sessions WHERE user_id=?", (user["id"],)
+                ).fetchone()[0],
+                0,
+            )
+        with self.assertRaises(HTTPException) as unverified_login:
+            backend.login(backend.LoginIn(
+                identifier="student01", password="Valid@123",
+            ), request(method="POST"), Response())
+        self.assertEqual(unverified_login.exception.status_code, 403)
+
+        with backend.db() as connection:
+            connection.execute(
+                "UPDATE email_verification_tokens SET sent_at=? WHERE user_id=?",
+                (int(time.time()) - 61, user["id"]),
+            )
+        with patch.object(backend, "send_verification_email") as resend:
+            response = backend.resend_verification(
+                backend.EmailVerificationResendIn(email="student@example.com"),
+                request(method="POST"),
+            )
+        self.assertIn("If an unverified account exists", response["message"])
+        fresh_token = resend.call_args.args[1]
+        with self.assertRaises(HTTPException):
+            backend.verify_email(backend.VerifyEmailIn(token=token), request(method="POST"))
+        verified = backend.verify_email(
+            backend.VerifyEmailIn(token=fresh_token), request(method="POST")
+        )
+        self.assertIn("Email verified", verified["message"])
+        with self.assertRaises(HTTPException):
+            backend.verify_email(
+                backend.VerifyEmailIn(token=fresh_token), request(method="POST")
+            )
+        signed_in = backend.login(backend.LoginIn(
+            identifier="student01", password="Valid@123",
+        ), request(method="POST"), Response())
+        self.assertEqual(signed_in["user"]["role"], "STUDENT")
+
+    def test_verification_links_expire(self):
+        with patch.object(backend, "send_verification_email") as send_email:
+            backend.register(backend.RegisterIn(
+                username="student01", email="student@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+            ), request(method="POST"), Response())
+        token = send_email.call_args.args[1]
+        with backend.db() as connection:
+            connection.execute(
+                "UPDATE email_verification_tokens SET expires_at=?",
+                (int(time.time()) - 1,),
+            )
+        with self.assertRaises(HTTPException) as expired:
+            backend.verify_email(
+                backend.VerifyEmailIn(token=token), request(method="POST")
+            )
+        self.assertEqual(expired.exception.status_code, 400)
+        with backend.db() as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT email_verified FROM users WHERE username='student01'"
+                ).fetchone()["email_verified"],
+                0,
+            )
+
+    def test_brevo_api_sends_verification_message_using_configured_sender(self):
+        class AcceptedResponse:
+            status = 201
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+        with (
+            patch.dict("os.environ", {
+                "BREVO_API_KEY": "brevo-api-secret",
+                "BREVO_FROM_EMAIL": "cpedle <no-reply@example.com>",
+                "PUBLIC_APP_URL": "https://cpedle.example.com/",
+            }),
+            patch.object(backend, "urlopen", return_value=AcceptedResponse()) as send,
+        ):
+            backend.send_verification_email("student@example.com", "opaque-token")
+        outbound = send.call_args.args[0]
+        self.assertEqual(outbound.full_url, "https://api.brevo.com/v3/smtp/email")
+        self.assertEqual(outbound.get_header("Api-key"), "brevo-api-secret")
+        payload = json.loads(outbound.data)
+        self.assertEqual(payload["sender"], {"name": "cpedle", "email": "no-reply@example.com"})
+        self.assertEqual(payload["to"], [{"email": "student@example.com"}])
+        self.assertEqual(payload["subject"], "Verify your cpedle email address")
+        self.assertIn(
+            "https://cpedle.example.com/verify-email.html#token=opaque-token",
+            payload["htmlContent"],
         )
 
     def test_three_failures_lock_and_admin_reset_approval(self):
