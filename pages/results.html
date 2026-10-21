@@ -37,6 +37,7 @@
                 <a class="link" href="generator.html">PRACTICE EXAM</a>
                 <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html">HISTORY</a>
+                <a class="link" href="profile.html">PROFILE</a>
             </div>
         </div>
     </nav>
@@ -143,14 +144,7 @@
                     <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
                 `;
             } else if (user.role === 'STUDENT') {
-                navBar.innerHTML = `
-                    <a class="link" href="examinee-dashboard.html">DASHBOARD</a>
-                    <a class="link" href="subjects.html">DISCIPLINES</a>
-                    <a class="link" href="generator.html">PRACTICE EXAM</a>
-                    <a class="link" href="mock-exam.html">MOCK EXAM</a>
-                    <a class="link" href="exam-history.html">HISTORY</a>
-                    <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
-                `;
+                renderSessionNavigation(navBar, 'results.html');
             }
 
             const latest = CpedleDB.getLatestResult();

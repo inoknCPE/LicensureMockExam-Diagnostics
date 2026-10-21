@@ -843,8 +843,8 @@ def bootstrap(request: Request) -> dict:
             history = [
                 {**dict(row), "domains": json.loads(row["domains_json"])}
                 for row in connection.execute(
-                    f"""SELECT id,title,created_at AS date,score_pct AS scorePct,
-                               total_items AS totalItems,correct_items AS correctItems,
+                    f"""SELECT id,title,created_at AS date,score_pct AS "scorePct",
+                               total_items AS "totalItems",correct_items AS "correctItems",
                                domains_json,report_json FROM exam_history {where_h} ORDER BY id DESC""",
                     params,
                 )
@@ -1763,8 +1763,10 @@ def start_practice_exam(payload: PracticeAttemptIn,
     ids = payload.question_ids
     if (not allowed or not selected or len(selected) > 5 or len(selected) != len(set(selected)) or
             any(domain not in allowed for domain in selected) or
-            len(ids) < len(selected) or len(ids) > 200 or len(ids) != len(set(ids))):
+            len(ids) > 200 or len(ids) != len(set(ids))):
         raise HTTPException(422, "Choose unique questions from selected domains in your discipline.")
+    if len(ids) < len(selected):
+        raise HTTPException(422, "Include at least one question from every selected domain.")
     with db() as connection:
         local = {row["id"]: row["domain"] for row in connection.execute(
             "SELECT id,domain FROM questions")}
@@ -2022,9 +2024,9 @@ def submit_exam(payload: ExamSubmission, student: dict = Depends(role_required("
 def exam_report(exam_id: int, user: dict = Depends(role_required("STUDENT", "ADMIN"))) -> dict:
     with db() as connection:
         row = connection.execute(
-            """SELECT h.id,h.user_id,h.title,h.created_at AS date,h.score_pct AS scorePct,
-                      h.total_items AS totalItems,h.correct_items AS correctItems,
-                      h.domains_json,h.report_json,u.name AS studentName,
+            """SELECT h.id,h.user_id,h.title,h.created_at AS date,h.score_pct AS "scorePct",
+                      h.total_items AS "totalItems",h.correct_items AS "correctItems",
+                      h.domains_json,h.report_json,u.name AS "studentName",
                       u.username,u.discipline
                FROM exam_history h JOIN users u ON u.id=h.user_id WHERE h.id=?""", (exam_id,)
         ).fetchone()
@@ -2045,9 +2047,9 @@ def exam_report(exam_id: int, user: dict = Depends(role_required("STUDENT", "ADM
 def cohort_roster(admin: dict = Depends(role_required("ADMIN"))) -> list[dict]:
     with db() as connection:
         rows = connection.execute(
-            """SELECT h.id,h.title,h.created_at AS date,h.score_pct AS scorePct,
-                      h.total_items AS totalItems,h.correct_items AS correctItems,
-                      h.domains_json,h.report_json,u.name AS studentName,u.username,u.discipline
+            """SELECT h.id,h.title,h.created_at AS date,h.score_pct AS "scorePct",
+                      h.total_items AS "totalItems",h.correct_items AS "correctItems",
+                      h.domains_json,h.report_json,u.name AS "studentName",u.username,u.discipline
                FROM exam_history h JOIN users u ON u.id=h.user_id
                ORDER BY h.created_at DESC,h.id DESC"""
         ).fetchall()

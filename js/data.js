@@ -371,12 +371,24 @@ function renderSessionNavigation(navBar, activePage = '') {
     navBar.hidden = false;
 }
 
-function getRoleLandingPage(user) {
+function getRoleLandingPage(user, requestedPage = '') {
     if (user.role === 'ADMIN') return 'admin-dashboard.html';
-    if (user.role === 'EXAMINER') return user.name ? 'examiner-dashboard.html' : 'profile.html';
+    if (user.role === 'EXAMINER' && !user.name) return 'profile.html';
     if (user.role === 'STUDENT') {
-        return user.name && user.discipline ? 'examinee-dashboard.html' : 'profile.html';
+        if (!user.name || !user.discipline) return 'profile.html';
     }
+    const rolePages = {
+        ADMIN: ['admin-dashboard.html', 'test-bank.html', 'admin-accounts.html',
+            'admin-question-approvals.html', 'admin-reports.html'],
+        EXAMINER: ['examiner-dashboard.html', 'test-bank.html',
+            'examiner-question-submissions.html', 'profile.html'],
+        STUDENT: ['examinee-dashboard.html', 'subjects.html', 'generator.html',
+            'mock-exam.html', 'exam-history.html', 'remediation.html', 'profile.html',
+            'print-report.html']
+    };
+    if (rolePages[user.role]?.includes(requestedPage)) return requestedPage;
+    if (user.role === 'EXAMINER') return 'examiner-dashboard.html';
+    if (user.role === 'STUDENT') return 'examinee-dashboard.html';
     return 'login.html';
 }
 
@@ -736,14 +748,27 @@ const CpedleDB = {
 
         let selected;
         if (selectedDomains) {
-            const domainCounts = allocateTosCounts(selectedDomains, selectedDomains.map(() => 1), count);
+            const domainPools = Object.fromEntries(selectedDomains.map(name =>
+                [name, pool.filter(question => question.domain === name)]));
+            const unavailable = selectedDomains.filter(name => !domainPools[name].length);
+            if (unavailable.length) {
+                throw new Error(`No questions are available for the selected domain${unavailable.length === 1 ? '' : 's'}: ${unavailable.join(', ')}.`);
+            }
+            const capacity = selectedDomains.reduce((total, name) => total + domainPools[name].length, 0);
+            if (capacity < count) {
+                throw new Error(`The selected domains have ${capacity} available questions; ${count} are required.`);
+            }
+            const domainCounts = Object.fromEntries(selectedDomains.map(name => [name, 0]));
+            for (let remaining = count; remaining > 0; remaining--) {
+                const next = selectedDomains
+                    .filter(name => domainCounts[name] < domainPools[name].length)
+                    .sort((left, right) => domainCounts[left] - domainCounts[right])[0];
+                domainCounts[next]++;
+            }
             selected = [];
             for (const name of selectedDomains) {
-                const domainPool = pool.filter(q => q.domain === name);
+                const domainPool = domainPools[name];
                 const quota = domainCounts[name];
-                if (domainPool.length < quota) {
-                    throw new Error(`${name} has only ${domainPool.length} questions; ${quota} are needed for this practice set.`);
-                }
                 const targets = allocateTosCounts(DIFFICULTY_LEVELS,
                     [easyPct, medPct, hardPct], quota);
                 const chosen = DIFFICULTY_LEVELS.flatMap(level =>

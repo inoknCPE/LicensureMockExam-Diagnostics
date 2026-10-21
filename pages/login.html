@@ -115,7 +115,8 @@
             await CpedleDB.ready;
             const user = CpedleDB.getCurrentUser();
             if (user.role !== 'GUEST') {
-                window.location.replace(getRoleLandingPage(user));
+                const requestedPage = new URLSearchParams(window.location.search).get('next');
+                window.location.replace(getRoleLandingPage(user, requestedPage));
                 return;
             }
             renderSessionNavigation(document.getElementById('login-nav-options'), 'login.html');
@@ -141,7 +142,8 @@
 
             const res = await CpedleDB.login(email, pass);
             if (res.success) {
-                window.location.href = getRoleLandingPage(res.user);
+                const requestedPage = new URLSearchParams(window.location.search).get('next');
+                window.location.href = getRoleLandingPage(res.user, requestedPage);
             } else {
                 errBox.innerText = res.message;
                 errBox.style.display = 'block';

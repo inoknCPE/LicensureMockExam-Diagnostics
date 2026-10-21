@@ -38,6 +38,16 @@ PAGE_ROLES = {
 }
 
 
+def role_landing_page(user: dict) -> str:
+    if user["role"] == "ADMIN":
+        return "admin-dashboard.html"
+    if user["role"] == "EXAMINER":
+        return "examiner-dashboard.html" if user["name"] else "profile.html"
+    if user["role"] == "STUDENT":
+        return "examinee-dashboard.html" if user["name"] and user["discipline"] else "profile.html"
+    return "index.html"
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize()
@@ -99,15 +109,26 @@ def html_page(page_name: str, request: Request) -> Response:
     filename = f"{page_name}.html"
     if filename not in HTML_PAGES:
         raise HTTPException(status_code=404, detail="Page not found")
-    if filename in {"exam.html", "results.html"}:
+    session = None
+    if filename in PAGE_ROLES or filename in {"exam.html", "results.html", "login.html"}:
         session = current_session(request)
+    if filename == "login.html" and session:
+        user = session[0]
+        requested_page = request.query_params.get("next", "")
+        if user["role"] == "STUDENT" and (not user["name"] or not user["discipline"]):
+            destination = "profile.html"
+        elif requested_page in PAGE_ROLES and user["role"] in PAGE_ROLES[requested_page]:
+            destination = requested_page
+        else:
+            destination = role_landing_page(user)
+        return RedirectResponse(f"/{destination}", status_code=303)
+    if filename in {"exam.html", "results.html"}:
         if session and session[0]["role"] in {"ADMIN", "EXAMINER"}:
             raise HTTPException(status_code=403, detail="This role manages exams rather than taking them.")
     allowed = PAGE_ROLES.get(filename)
     if allowed:
-        session = current_session(request)
         if session is None:
-            return RedirectResponse("/login.html", status_code=303)
+            return RedirectResponse(f"/login.html?next={filename}", status_code=303)
         if session[0]["role"] not in allowed:
             raise HTTPException(status_code=403, detail="Your account cannot open this page.")
         if filename == "profile.html" and session[0]["role"] == "ADMIN":

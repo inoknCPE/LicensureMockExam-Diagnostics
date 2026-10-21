@@ -225,7 +225,13 @@ test('signed-in users are routed away from the guest login page to their role la
     }
     const login = fs.readFileSync(path.join(pagesDir, 'login.html'), 'utf8');
     assert.match(login, /id="login-nav-options" hidden/);
-    assert.match(login, /await CpedleDB\.ready;[\s\S]*?getRoleLandingPage\(user\)[\s\S]*?renderSessionNavigation\(/);
+    assert.match(login, /await CpedleDB\.ready;[\s\S]*?getRoleLandingPage\(user, requestedPage\)[\s\S]*?renderSessionNavigation\(/);
+    assert.equal(vm.runInContext(
+        "getRoleLandingPage({ role: 'STUDENT', name: 'Examinee', discipline: 'Network Engineer' }, 'mock-exam.html')",
+        context), 'mock-exam.html');
+    assert.equal(vm.runInContext(
+        "getRoleLandingPage({ role: 'STUDENT', name: 'Examinee', discipline: 'Network Engineer' }, '//evil.example')",
+        context), 'examinee-dashboard.html');
 });
 
 test('public pages hide their guest navigation until session state is ready', () => {
@@ -277,6 +283,36 @@ test('student pages highlight their own tab and navbar hover stays aligned', () 
     const css = fs.readFileSync(path.join(root, 'css', 'styles.css'), 'utf8');
     assert.match(css, /\.nav__options :is\(a, button\):is\(:hover, :focus-visible, :active\)/);
     assert.doesNotMatch(css, /translate:\s*0 calc\(var\(--lerp/);
+});
+
+test('all examinee pages keep the profile link visible while the session loads', () => {
+    const pages = [
+        ['examinee-dashboard.html', 'examinee-dashboard.html'],
+        ['generator.html', 'generator.html'],
+        ['remediation.html', 'remediation.html'],
+        ['mock-exam.html', 'mock-exam.html'],
+        ['exam-history.html', 'exam-history.html']
+    ];
+    for (const [file, activePage] of pages) {
+        const html = fs.readFileSync(path.join(pagesDir, file), 'utf8');
+        const nav = html.match(/<div class="nav__options" id="(?:student-nav-bar|nav-options-bar)">([\s\S]*?)<\/div>/);
+        assert.ok(nav, `${file} has examinee navigation`);
+        assert.match(nav[1], /href="profile\.html"/, `${file} includes Profile before JavaScript loads`);
+        if (activePage !== 'remediation.html') {
+            assert.match(nav[1], new RegExp(`href="${activePage}" aria-current="page"`), file);
+        }
+    }
+    const history = fs.readFileSync(path.join(pagesDir, 'exam-history.html'), 'utf8');
+    const mock = fs.readFileSync(path.join(pagesDir, 'mock-exam.html'), 'utf8');
+    assert.match(history, /renderSessionNavigation\(document\.getElementById\('nav-options-bar'\), 'exam-history\.html'\)/);
+    assert.match(mock, /renderSessionNavigation\(document\.getElementById\('nav-options-bar'\), 'mock-exam\.html'\)/);
+});
+
+test('bootstrap preserves camelCase score fields expected by the examinee UI', () => {
+    const backend = fs.readFileSync(path.join(root, 'backend.py'), 'utf8');
+    assert.match(backend, /score_pct AS "scorePct"/);
+    assert.match(backend, /total_items AS "totalItems"/);
+    assert.match(backend, /correct_items AS "correctItems"/);
 });
 
 test('public JavaScript does not include seeded answer keys', () => {

@@ -13,10 +13,6 @@
     <script src="js/theme-toggle.js"></script>
 </head>
 <body>
-    <script>
-        enforceRoleGuard(['STUDENT', 'ADMIN']);
-    </script>
-
     <!-- NAVIGATION BAR -->
     <nav class="new-nav">
         <div class="nav__content">
@@ -42,6 +38,7 @@
                 <a class="link" href="generator.html">PRACTICE EXAM</a>
                 <a class="link" href="mock-exam.html">MOCK EXAM</a>
                 <a class="link" href="exam-history.html" aria-current="page">HISTORY</a>
+                <a class="link" href="profile.html">PROFILE</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -106,7 +103,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            await CpedleDB.ready;
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('nav-options-bar'), 'exam-history.html');
             const container = document.getElementById('history-container');
             const history = CpedleDB.getExamHistory();
 

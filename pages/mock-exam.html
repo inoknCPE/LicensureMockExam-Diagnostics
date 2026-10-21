@@ -9,7 +9,6 @@
     <script src="js/theme-toggle.js"></script>
 </head>
 <body>
-    <script>enforceRoleGuard(['STUDENT']);</script>
     <nav class="new-nav">
         <div class="nav__content">
             <a href="index.html" class="nav-logo-box"><span>cpedle</span></a>
@@ -19,6 +18,7 @@
                 <a class="link" href="generator.html">PRACTICE EXAM</a>
                 <a class="link" href="mock-exam.html" aria-current="page">MOCK EXAM</a>
                 <a class="link" href="exam-history.html">HISTORY</a>
+                <a class="link" href="profile.html">PROFILE</a>
                 <button class="link" onclick="CpedleDB.logout()">LOGOUT</button>
             </div>
         </div>
@@ -37,7 +37,9 @@
     </main>
     <button aria-pressed="false" class="theme-toggle" id="theme-toggle" title="Toggle Theme" aria-label="Toggle dark/light mode">☾</button>
     <script>
-        CpedleDB.ready.then(() => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await enforceRoleGuard(['STUDENT']);
+            renderSessionNavigation(document.getElementById('nav-options-bar'), 'mock-exam.html');
             document.getElementById('exam-discipline').textContent = CpedleDB.getCurrentUser().discipline || 'your discipline';
         });
         document.getElementById('start-licensure-exam').addEventListener('click', async event => {

@@ -208,6 +208,35 @@ test('student practice can combine selected domains but cannot use another disci
     })})`, context), /every selected domain is represented/);
 });
 
+test('student practice represents every selected domain and redistributes quotas around shortages', () => {
+    const domains = ['Networking Fundamentals', 'Network Security'];
+    const unevenBank = [
+        { id: 'only-fundamentals', q: 'F?', opts: [], domain: domains[0],
+            cognitive: 'Remember', difficulty: 'Easy' },
+        ...Array.from({ length: 5 }, (_, index) => ({
+            id: `security-${index}`, q: 'S?', opts: [], domain: domains[1],
+            cognitive: 'Remember', difficulty: 'Easy'
+        }))
+    ];
+    context.unevenBank = unevenBank;
+    vm.runInContext('bankCache = unevenBank', context);
+    try {
+        const exam = vm.runInContext(`CpedleDB.generateExam(${JSON.stringify({
+            count: 5, timeMinutes: 20, domains, mode: 'student_practice'
+        })})`, context);
+        assert.equal(exam.questions.length, 5);
+        assert.deepEqual(domains.map(domain =>
+            exam.questions.filter(question => question.domain === domain).length), [1, 4]);
+
+        vm.runInContext("bankCache = unevenBank.filter(question => question.domain !== 'Network Security')", context);
+        assert.throws(() => vm.runInContext(`CpedleDB.generateExam(${JSON.stringify({
+            count: 5, timeMinutes: 20, domains, mode: 'student_practice'
+        })})`, context), /No questions are available for the selected domain: Network Security/);
+    } finally {
+        vm.runInContext('bankCache = testBank', context);
+    }
+});
+
 test('mixed-format questions use exactly one stable answer format per attempt', () => {
     const mixedBank = bank.map(q => ({ ...q, questionType: 'both', opts: ['A', 'B', 'C', 'D'] }));
     context.mixedBank = mixedBank;

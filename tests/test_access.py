@@ -26,7 +26,7 @@ from server import health_check, home_page, html_page  # noqa: E402
 DEFAULT_DB_PATH = backend.DB_PATH
 
 
-def request(cookie="", method="GET", csrf=""):
+def request(cookie="", method="GET", csrf="", query=""):
     headers = [(b"host", b"localhost")]
     if cookie:
         headers.append((b"cookie", cookie.encode()))
@@ -35,7 +35,7 @@ def request(cookie="", method="GET", csrf=""):
     return Request({
         "type": "http", "method": method, "scheme": "http",
         "server": ("localhost", 80), "path": "/", "root_path": "",
-        "query_string": b"", "headers": headers,
+        "query_string": query.encode(), "headers": headers,
     })
 
 
@@ -92,6 +92,17 @@ class AccessTests(unittest.TestCase):
             Path(html_page("verify-email", request()).path),
             ROOT / "pages" / "verify-email.html",
         )
+
+    def test_protected_page_redirect_returns_signed_in_user_to_requested_page(self):
+        student, cookie = self.register_student()
+        backend.save_profile(backend.ProfileIn(
+            name="Network Student", discipline="Network Engineer"), student["user"])
+        redirected = html_page("mock-exam", request())
+        self.assertEqual(redirected.status_code, 303)
+        self.assertEqual(redirected.headers["location"], "/login.html?next=mock-exam.html")
+        login = html_page("login", request(cookie, query="next=mock-exam.html"))
+        self.assertEqual(login.status_code, 303)
+        self.assertEqual(login.headers["location"], "/mock-exam.html")
 
     def test_password_length_allows_thirty_but_not_thirty_one_characters(self):
         backend.validate_password("A" + "a" * 27 + "@1")
@@ -848,7 +859,11 @@ class AccessTests(unittest.TestCase):
         saved = backend.submit_exam(payload, user)
         self.assertEqual(saved["title"], "Network Engineer Practice Exam (2 domains)")
         self.assertEqual({item["name"] for item in saved["domains"]}, set(selected))
-        self.assertEqual(backend.bootstrap(request(cookie))["history"][0]["mode"], "practice")
+        history_item = backend.bootstrap(request(cookie))["history"][0]
+        self.assertEqual(history_item["mode"], "practice")
+        self.assertEqual(history_item["scorePct"], saved["scorePct"])
+        self.assertEqual(history_item["correctItems"], saved["correctItems"])
+        self.assertEqual(history_item["totalItems"], saved["totalItems"])
         with self.assertRaises(HTTPException) as foreign:
             backend.submit_exam(backend.ExamSubmission(
                 title="Practice", mode="student_practice",
