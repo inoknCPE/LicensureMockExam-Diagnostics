@@ -876,10 +876,14 @@ const CpedleDB = {
     async discardActiveExam() {
         const exam = this.getActiveExam();
         if (exam?.attemptId) {
-            const result = await apiCall(`/exams/attempts/${encodeURIComponent(exam.attemptId)}`, {
-                method: 'DELETE'
-            });
-            if (result.expired) throw new Error('Time expired before exit. Your saved answers were submitted.');
+            try {
+                const result = await apiCall(`/exams/attempts/${encodeURIComponent(exam.attemptId)}`, {
+                    method: 'DELETE'
+                });
+                if (result.expired) throw new Error('Time expired before exit. Your saved answers were submitted.');
+            } catch (error) {
+                if (!/already (?:been )?submitted/i.test(error.message)) throw error;
+            }
         }
         if (answerSaveTimer) clearTimeout(answerSaveTimer);
         answerSaveTimer = null;

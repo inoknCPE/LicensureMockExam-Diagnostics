@@ -61,3 +61,54 @@ test('student practice receives a server deadline and saves answers before final
     assert.equal(JSON.parse(answerCall.options.body).answers[0].userAns, 1);
     assert.equal(saved.has('cpedle_active_exam'), false);
 });
+
+test('a stale submitted attempt does not block starting a fresh licensure exam', async () => {
+    const saved = new Map();
+    const calls = [];
+    const questions = Array.from({ length: 100 }, (_, index) => ({
+        id: `QB-${index}`, q: `Question ${index}`, opts: ['A', 'B', 'C', 'D'],
+        domain: 'Networking Fundamentals', cognitive: 'Remember', difficulty: 'Easy'
+    }));
+    saved.set('cpedle_active_exam', JSON.stringify({
+        id: 'LICENSURE-submitted-attempt', attemptId: 'submitted-attempt',
+        mode: 'licensure', title: 'Mock Licensure Exam', timeSeconds: 3600, questions
+    }));
+    const context = vm.createContext({
+        console, setTimeout, clearTimeout,
+        sessionStorage: {
+            getItem: key => saved.get(key) || null,
+            setItem: (key, value) => saved.set(key, value),
+            removeItem: key => saved.delete(key)
+        },
+        document: { addEventListener() {} },
+        window: { location: { href: '' } },
+        fetch: async (url, options = {}) => {
+            calls.push({ url, options });
+            if (url === '/api/bootstrap') {
+                return { ok: true, json: async () => ({
+                    user: { role: 'STUDENT', discipline: 'Network Engineer' },
+                    csrf: 'token', questions: [], history: []
+                }) };
+            }
+            if (url === '/api/exams/attempts/submitted-attempt') {
+                return { ok: false, json: async () => ({ detail: 'This exam has already been submitted.' }) };
+            }
+            if (url === '/api/exams/licensure/start') {
+                return { ok: true, json: async () => ({
+                    attemptId: 'fresh-attempt', startedAt: 1000, expiresAt: 4600,
+                    serverNow: 1000, timeSeconds: 3600, title: 'Mock Licensure Exam', questions
+                }) };
+            }
+            throw new Error(`Unexpected request: ${url}`);
+        }
+    });
+    vm.runInContext(source, context);
+    await vm.runInContext('CpedleDB.ready', context);
+
+    await vm.runInContext('CpedleDB.discardActiveExam()', context);
+    const exam = await vm.runInContext('CpedleDB.startLicensureExam()', context);
+
+    assert.equal(exam.attemptId, 'fresh-attempt');
+    assert.equal(calls.filter(call => call.url === '/api/exams/licensure/start').length, 1);
+    assert.equal(JSON.parse(saved.get('cpedle_active_exam')).attemptId, 'fresh-attempt');
+});
