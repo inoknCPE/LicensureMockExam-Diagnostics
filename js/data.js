@@ -530,12 +530,13 @@ const CpedleDB = {
                      code: /locked/i.test(error.message) ? 'account_locked' : null };
         }
     },
-    async register(username, email, password, confirmPassword) {
+    async register(username, email, password, confirmPassword, acceptTerms, acknowledgePrivacy) {
         try {
             const result = await apiCall('/auth/register', {
                 method: 'POST',
                 body: JSON.stringify({
-                    username, email, password, confirm_password: confirmPassword
+                    username, email, password, confirm_password: confirmPassword,
+                    accept_terms: acceptTerms, acknowledge_privacy: acknowledgePrivacy
                 })
             });
             return { success: true, message: result.message };
@@ -543,13 +544,15 @@ const CpedleDB = {
             return { success: false, message: error.message };
         }
     },
-    async registerExaminer(username, email, password, confirmPassword, name, title, licenseNumber) {
+    async registerExaminer(username, email, password, confirmPassword, name, title, licenseNumber,
+        acceptTerms, acknowledgePrivacy) {
         try {
             const result = await apiCall('/auth/register-examiner', {
                 method: 'POST',
                 body: JSON.stringify({ username, email, password,
                     confirm_password: confirmPassword, name, title,
-                    license_number: licenseNumber })
+                    license_number: licenseNumber, accept_terms: acceptTerms,
+                    acknowledge_privacy: acknowledgePrivacy })
             });
             return { success: true, message: result.message };
         } catch (error) {
@@ -937,6 +940,12 @@ const CpedleDB = {
             return item ? [JSON.parse(item)] : [];
         }
         return historyCache;
+    },
+    async getExamReport(id) {
+        if (sessionUser.role !== 'STUDENT' || !Number.isInteger(id)) {
+            throw new Error('A saved student exam report is required.');
+        }
+        return apiCall(`/reports/exams/${id}`);
     },
     getLatestResult() {
         const temporary = sessionStorage.getItem(STORAGE_KEYS.GUEST_RESULT);

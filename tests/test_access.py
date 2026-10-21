@@ -88,6 +88,8 @@ class AccessTests(unittest.TestCase):
     def test_pages_are_served_from_pages_directory(self):
         self.assertEqual(Path(home_page().path), ROOT / "pages" / "index.html")
         self.assertEqual(Path(html_page("faq", request()).path), ROOT / "pages" / "faq.html")
+        self.assertEqual(Path(html_page("terms", request()).path), ROOT / "pages" / "terms.html")
+        self.assertEqual(Path(html_page("privacy", request()).path), ROOT / "pages" / "privacy.html")
         self.assertEqual(
             Path(html_page("verify-email", request()).path),
             ROOT / "pages" / "verify-email.html",
@@ -124,6 +126,7 @@ class AccessTests(unittest.TestCase):
             backend.register(backend.RegisterIn(
                 username="student01", email="student@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         backend.verify_email(backend.VerifyEmailIn(token=send_email.call_args.args[1]),
                              request(method="POST"))
@@ -146,6 +149,7 @@ class AccessTests(unittest.TestCase):
             result = backend.register_examiner(backend.ExaminerRegisterIn(
                 username=username, email=f"{username}@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
                 name="Examiner Example", title="Licensed Professional Teacher",
                 license_number=license_number,
             ), request(method="POST"))
@@ -154,6 +158,14 @@ class AccessTests(unittest.TestCase):
         return result
 
     def test_examiner_registration_requires_admin_approval(self):
+        with self.assertRaises(HTTPException) as missing_acceptance:
+            backend.register_examiner(backend.ExaminerRegisterIn(
+                username="examiner01", email="examiner01@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+                name="Examiner Example", title="Licensed Professional Teacher",
+                license_number="PRC-12345",
+            ), request(method="POST"))
+        self.assertEqual(missing_acceptance.exception.status_code, 422)
         submitted = self.register_examiner()
         self.assertIn("administrator review", submitted["message"])
         with backend.db() as connection:
@@ -165,6 +177,14 @@ class AccessTests(unittest.TestCase):
             self.assertEqual((row["role"], row["name"], row["discipline"], row["professional_title"], row["license_number"], row["examiner_status"]),
                              ("EXAMINER", "Examiner Example", "", "Licensed Professional Teacher", "PRC-12345", "pending"))
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM sessions WHERE user_id=?", (examiner_id,)).fetchone()[0], 0)
+            accepted = connection.execute(
+                "SELECT terms_accepted_at,terms_version,privacy_acknowledged_at,privacy_version "
+                "FROM users WHERE id=?", (examiner_id,)
+            ).fetchone()
+            self.assertGreater(accepted["terms_accepted_at"], 0)
+            self.assertEqual(accepted["terms_version"], backend.TERMS_VERSION)
+            self.assertGreater(accepted["privacy_acknowledged_at"], 0)
+            self.assertEqual(accepted["privacy_version"], backend.PRIVACY_VERSION)
         with self.assertRaises(HTTPException) as pending_login:
             backend.login(backend.LoginIn(identifier="examiner01", password="Valid@123"),
                           request(method="POST"), Response())
@@ -243,12 +263,14 @@ class AccessTests(unittest.TestCase):
             backend.register(backend.RegisterIn(
                 username="STUDENT01", email="other@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         self.assertEqual(error.exception.status_code, 409)
         with self.assertRaises(HTTPException) as error:
             backend.register(backend.RegisterIn(
                 username="student02", email="STUDENT@EXAMPLE.COM",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         self.assertEqual(error.exception.status_code, 409)
         with self.assertRaises(HTTPException) as error:
@@ -259,11 +281,33 @@ class AccessTests(unittest.TestCase):
             "STUDENT",
         )
 
+    def test_student_registration_requires_and_records_legal_acceptance(self):
+        with self.assertRaises(HTTPException) as missing_acceptance:
+            backend.register(backend.RegisterIn(
+                username="student01", email="student@example.com",
+                password="Valid@123", confirm_password="Valid@123",
+            ), request(method="POST"), Response())
+        self.assertEqual(missing_acceptance.exception.status_code, 422)
+        with backend.db() as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM users WHERE username='student01'").fetchone()[0], 0)
+
+        self.register_student()
+        with backend.db() as connection:
+            user = connection.execute(
+                "SELECT terms_accepted_at,terms_version,privacy_acknowledged_at,privacy_version "
+                "FROM users WHERE username='student01'"
+            ).fetchone()
+        self.assertGreater(user["terms_accepted_at"], 0)
+        self.assertEqual(user["terms_version"], backend.TERMS_VERSION)
+        self.assertGreater(user["privacy_acknowledged_at"], 0)
+        self.assertEqual(user["privacy_version"], backend.PRIVACY_VERSION)
+
     def test_student_registration_requires_single_use_email_verification(self):
         with patch.object(backend, "send_verification_email") as send_email:
             result = backend.register(backend.RegisterIn(
                 username="student01", email="student@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         self.assertIn("Check your email", result["message"])
         token = send_email.call_args.args[1]
@@ -321,6 +365,7 @@ class AccessTests(unittest.TestCase):
                 backend.register(backend.RegisterIn(
                     username="student01", email="student@example.com",
                     password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
                 ), request(method="POST"), Response())
         self.assertIn("account was created", failed_send.exception.detail.lower())
         self.assertIn("Resend it", failed_send.exception.detail)
@@ -351,6 +396,7 @@ class AccessTests(unittest.TestCase):
             backend.register(backend.RegisterIn(
                 username="student01", email="student@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         with backend.db() as connection:
             user_id = connection.execute(
@@ -388,6 +434,7 @@ class AccessTests(unittest.TestCase):
             backend.register(backend.RegisterIn(
                 username="student01", email="student@example.com",
                 password="Valid@123", confirm_password="Valid@123",
+                accept_terms=True, acknowledge_privacy=True,
             ), request(method="POST"), Response())
         token = send_email.call_args.args[1]
         with backend.db() as connection:
@@ -705,12 +752,16 @@ class AccessTests(unittest.TestCase):
             answers=[backend.AnswerIn(id="CPE-NET-001", userAns=2)],
         ), student_user)
         self.assertEqual(result["scorePct"], 100)
+        self.assertEqual(result["questionReview"][0]["userAnswer"], "C. Network")
+        self.assertEqual(result["questionReview"][0]["correctAnswer"], "C. Network")
+        self.assertTrue(result["questionReview"][0]["isCorrect"])
         with backend.db() as connection:
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM exam_history").fetchone()[0], 1)
 
         card = backend.exam_report(result["id"], student_user)
         self.assertEqual(card["studentName"], "Network Student")
         self.assertEqual(card["domains"][0]["scorePct"], 100)
+        self.assertEqual(card["questionReview"], result["questionReview"])
         self.assertIsNone(card["report"])
         admin, _ = self.login_admin()
         admin_report = backend.exam_report(result["id"], admin["user"])
@@ -893,6 +944,10 @@ class AccessTests(unittest.TestCase):
             result = backend.submit_timed_attempt(started["attemptId"], user)
             self.assertEqual(result["scorePct"], 50)
             self.assertEqual(result["id"], late["resultId"])
+            review = backend.exam_report(result["id"], user)["questionReview"]
+            self.assertTrue(review[0]["isCorrect"])
+            self.assertEqual(review[1]["userAnswer"], "Not answered")
+            self.assertFalse(review[1]["isCorrect"])
             self.assertEqual(backend.exam_attempt_status(started["attemptId"], user)["resultId"], result["id"])
             self.assertEqual(len(backend.cohort_roster({"role": "ADMIN"})), 1)
 
@@ -1084,6 +1139,7 @@ class AccessTests(unittest.TestCase):
                 title="Changed identification", answers=[
                     backend.AnswerIn(id="QB-1", userAns="replacement answer")]))
         self.assertEqual(scored["scorePct"], 100)
+        self.assertEqual(scored["questionReview"][0]["correctAnswer"], "replacement answer")
 
     @unittest.skipUnless(backend.QUESTION_BANK_PATH.is_file(), "Team question bank not installed")
     def test_imported_question_types_are_server_graded_without_guest_history(self):
@@ -1114,6 +1170,11 @@ class AccessTests(unittest.TestCase):
             title="Wrong answer", answers=[backend.AnswerIn(id="QB-2", userAns=0)]
         ), request(method="POST"))
         self.assertEqual(wrong["scorePct"], 0)
+        question_with_answer = next(q for q in backend.imported_questions(True) if q["id"] == "QB-2")
+        self.assertEqual(wrong["questionReview"][0]["userAnswer"], question_with_answer["opts"][0])
+        self.assertEqual(wrong["questionReview"][0]["correctAnswer"],
+                         question_with_answer["opts"][question_with_answer["ans"]])
+        self.assertFalse(wrong["questionReview"][0]["isCorrect"])
         student, _ = self.register_student()
         student_user = backend.save_profile(backend.ProfileIn(
             name="Network Student", discipline="Network Engineer"), student["user"])["user"]

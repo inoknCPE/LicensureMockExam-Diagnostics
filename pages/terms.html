@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms and Conditions | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box"><span>cpedle</span></a>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="index.html">HOME</a>
+                <a class="link" href="faq.html">FAQ</a>
+                <a class="link" href="terms.html" aria-current="page">TERMS</a>
+                <a class="link" href="privacy.html">PRIVACY</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+    <main class="container section-padding legal-page">
+        <article class="card">
+            <p class="legal-draft-notice"><strong>Draft for review:</strong> These terms are a product-policy draft, not legal advice. The site owner should review them with qualified counsel and confirm they match actual operations before production use.</p>
+            <h1>Terms and Conditions</h1>
+            <p class="legal-effective-date">Version 2026-10-21</p>
+
+            <h2>1. About the service</h2>
+            <p>cpedle provides Computer Engineering study materials, practice questions, mock examinations, score reports, and related learning features. By creating an account or using the service, you agree to these Terms. If you do not agree, do not create an account or use the service.</p>
+
+            <h2>2. Educational use only</h2>
+            <p>Practice exams and mock-exam scores are learning aids. They are not an official licensure examination, do not represent an endorsement by a licensing authority, and do not guarantee a passing score, professional license, or particular result. Question content and explanations may contain errors or be updated.</p>
+
+            <h2>3. Accounts and eligibility</h2>
+            <p>Provide accurate registration details, keep your sign-in credentials private, and promptly notify the site operator if you believe your account has been used without permission. You are responsible for activity performed through your account. Examiner accounts may require verification and administrator approval before access is granted.</p>
+
+            <h2>4. Fair and acceptable use</h2>
+            <p>Use the service for lawful study and authorized review. Do not attempt to access answer keys or accounts you are not authorized to use; interfere with the service; misrepresent your identity or credentials; or copy, redistribute, sell, or publicly disclose question-bank content except where you have permission. Follow the instructions shown for each exam.</p>
+
+            <h2>5. Exam results and submitted material</h2>
+            <p>For registered examinees, answers and results may be processed to grade an exam and saved in exam history for later review. Examiner question proposals may be reviewed by administrators before publication. See the <a href="privacy.html">Privacy Notice</a> for information about personal data handled by the service.</p>
+
+            <h2>6. Availability and changes</h2>
+            <p>The service and its content may change as the project is maintained. The operator may correct, suspend, or remove features or content. We will publish revised terms on this page; the version and effective date should be reviewed whenever these terms change.</p>
+
+            <h2>7. Contact</h2>
+            <p>Questions about these terms can be sent to <a href="mailto:info@cpedle.com">info@cpedle.com</a>.</p>
+        </article>
+    </main>
+    <footer class="footer bg-white"><div class="container"><div class="footer-bottom">info@cpedle.com</div></div></footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            renderSessionNavigation(document.getElementById('nav-options-bar'), 'terms.html');
+        });
+    </script>
+    <script src="js/legal-links.js"></script>
+</body>
+</html>

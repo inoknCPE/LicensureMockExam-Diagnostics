@@ -83,6 +83,12 @@
                 <!-- Populated dynamically -->
             </div>
 
+            <section id="answer-review" class="answer-review" hidden aria-labelledby="answer-review-title">
+                <h2 id="answer-review-title">Answer Review</h2>
+                <p id="answer-review-status" role="status">Loading your answers...</p>
+                <div id="answer-review-list"></div>
+            </section>
+
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <a id="print-card-link" href="#" class="btn-outline-pill" style="width: 100%;" hidden>Print Performance Card / Save as PDF</a>
                 <a id="btn-remediation" href="remediation.html" class="btn-solid-pill coral-btn" style="width: 100%;">Target Deficient Topics in Remediation →</a>
@@ -180,6 +186,68 @@
             }
             document.getElementById('score-summary').innerText = `You scored ${latest.correctItems} out of ${latest.totalItems} items correctly (${latest.scorePct}%).`;
 
+            if (user.role === 'STUDENT' && Number.isInteger(latest.id)) {
+                const review = document.getElementById('answer-review');
+                const reviewStatus = document.getElementById('answer-review-status');
+                const reviewList = document.getElementById('answer-review-list');
+                review.hidden = false;
+                try {
+                    const report = await CpedleDB.getExamReport(latest.id);
+                    const questions = report.questionReview || [];
+                    reviewList.replaceChildren();
+                    if (!questions.length) {
+                        reviewStatus.textContent = 'Answer review is not available for this exam.';
+                    } else {
+                        reviewStatus.textContent = `${questions.filter(question => question.isCorrect).length} of ${questions.length} questions answered correctly.`;
+                        questions.forEach((question, index) => {
+                            const item = document.createElement('article');
+                            item.className = `answer-review-item ${question.isCorrect ? 'is-correct' : 'is-incorrect'}`;
+
+                            const heading = document.createElement('h3');
+                            heading.textContent = `Question ${index + 1}`;
+                            item.appendChild(heading);
+
+                            const status = document.createElement('p');
+                            status.className = 'answer-review-result';
+                            status.textContent = question.isCorrect ? 'Correct' : 'Incorrect';
+                            item.appendChild(status);
+
+                            const prompt = document.createElement('p');
+                            prompt.className = 'answer-review-prompt';
+                            prompt.textContent = question.question || 'Question text unavailable';
+                            item.appendChild(prompt);
+
+                            if (question.imageUrl && question.imageUrl.startsWith('/static/images/')) {
+                                const image = document.createElement('img');
+                                image.src = question.imageUrl;
+                                image.alt = 'Question diagram';
+                                image.loading = 'lazy';
+                                item.appendChild(image);
+                            }
+
+                            const yourAnswer = document.createElement('p');
+                            yourAnswer.textContent = `Your answer: ${question.userAnswer || 'Not answered'}`;
+                            item.appendChild(yourAnswer);
+
+                            const correctAnswer = document.createElement('p');
+                            correctAnswer.textContent = `Correct answer: ${question.correctAnswer || 'Unavailable'}`;
+                            item.appendChild(correctAnswer);
+
+                            if (question.explanation) {
+                                const explanation = document.createElement('p');
+                                explanation.className = 'answer-review-explanation';
+                                explanation.textContent = `Explanation: ${question.explanation}`;
+                                item.appendChild(explanation);
+                            }
+
+                            reviewList.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    reviewStatus.textContent = `Could not load answer review: ${error.message}`;
+                }
+            }
+
             // Animate SVG Ring
             const svgCircle = document.getElementById('svg-score-circle');
             const svgText = document.getElementById('svg-score-text');
@@ -245,5 +313,6 @@
             }
         });
     </script>
+    <script src="js/legal-links.js"></script>
 </body>
 </html>

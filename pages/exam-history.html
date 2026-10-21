@@ -167,19 +167,96 @@
                             <div style="text-align: right;">
                                 <span style="font-size: 1.6rem; font-weight: 700; color: ${scoreColor};">${item.scorePct}%</span>
                             </div>
-                            <button type="button" class="btn-outline-pill" style="padding: 6px 14px; font-size: 0.8rem;" id="toggle-btn-${index}">View Breakdown ▼</button>
+                            <button type="button" class="btn-outline-pill" style="padding: 6px 14px; font-size: 0.8rem;" id="toggle-btn-${index}" onclick="event.stopPropagation(); toggleDetails(${index})">View Breakdown ▼</button>
                         </div>
                     </div>
 
                     <div id="details-${index}" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
                         <h4 style="font-style: normal; font-size: 0.95rem; margin-bottom: 15px; color: var(--navy);">Competency & Topic Breakdown</h4>
                         ${domainHtml}
-                        <a class="btn-outline-pill" href="print-report.html?type=card&id=${item.id}" style="margin-top:16px; display:inline-flex;">Print Performance Card / Save as PDF</a>
+                    <button type="button" class="btn-outline-pill" id="review-btn-${index}" style="margin-top:16px; display:inline-flex;" onclick="event.stopPropagation(); loadAnswerReview(${index}, ${item.id})">Review Answers</button>
+                    <div id="history-review-status-${index}" role="status" style="margin-top:12px;"></div>
+                    <div id="history-review-list-${index}" class="answer-review-list"></div>
+                    <a class="btn-outline-pill" href="print-report.html?type=card&id=${item.id}" style="margin-top:16px; display:inline-flex;">Print Performance Card / Save as PDF</a>
                     </div>
                 `;
                 container.appendChild(card);
             });
         });
+
+        async function loadAnswerReview(index, examId) {
+            const button = document.getElementById(`review-btn-${index}`);
+            const status = document.getElementById(`history-review-status-${index}`);
+            const list = document.getElementById(`history-review-list-${index}`);
+            if (!button || !status || !list) return;
+            if (button.dataset.loaded === 'true') {
+                list.hidden = !list.hidden;
+                button.textContent = list.hidden ? 'Show Answers' : 'Hide Answers';
+                return;
+            }
+
+            button.disabled = true;
+            status.textContent = 'Loading answer review...';
+            try {
+                const report = await CpedleDB.getExamReport(examId);
+                const questions = report.questionReview || [];
+                if (!questions.length) {
+                    status.textContent = 'Answer review is not available for this exam.';
+                    return;
+                }
+
+                list.replaceChildren();
+                questions.forEach((question, questionIndex) => {
+                    const item = document.createElement('article');
+                    item.className = `answer-review-item ${question.isCorrect ? 'is-correct' : 'is-incorrect'}`;
+
+                    const heading = document.createElement('h3');
+                    heading.textContent = `Question ${questionIndex + 1}`;
+                    item.appendChild(heading);
+
+                    const result = document.createElement('p');
+                    result.className = 'answer-review-result';
+                    result.textContent = question.isCorrect ? 'Correct' : 'Incorrect';
+                    item.appendChild(result);
+
+                    const prompt = document.createElement('p');
+                    prompt.className = 'answer-review-prompt';
+                    prompt.textContent = question.question || 'Question text unavailable';
+                    item.appendChild(prompt);
+
+                    if (question.imageUrl && question.imageUrl.startsWith('/static/images/')) {
+                    const image = document.createElement('img');
+                    image.src = question.imageUrl;
+                    image.alt = 'Question diagram';
+                    image.loading = 'lazy';
+                    item.appendChild(image);
+                    }
+
+                    const yourAnswer = document.createElement('p');
+                    yourAnswer.textContent = `Your answer: ${question.userAnswer || 'Not answered'}`;
+                    item.appendChild(yourAnswer);
+
+                    const correctAnswer = document.createElement('p');
+                    correctAnswer.textContent = `Correct answer: ${question.correctAnswer || 'Unavailable'}`;
+                    item.appendChild(correctAnswer);
+
+                    if (question.explanation) {
+                    const explanation = document.createElement('p');
+                    explanation.className = 'answer-review-explanation';
+                    explanation.textContent = `Explanation: ${question.explanation}`;
+                    item.appendChild(explanation);
+                    }
+                    list.appendChild(item);
+                });
+                button.dataset.loaded = 'true';
+                button.textContent = 'Hide Answers';
+                status.textContent = `${questions.filter(question => question.isCorrect).length} of ${questions.length} questions answered correctly.`;
+            } catch (error) {
+                status.textContent = `Could not load answer review: ${error.message}`;
+            } finally {
+                button.disabled = false;
+            }
+        }
 
         function toggleDetails(index) {
             const panel = document.getElementById(`details-${index}`);
@@ -193,5 +270,6 @@
             }
         }
     </script>
+    <script src="js/legal-links.js"></script>
 </body>
 </html>

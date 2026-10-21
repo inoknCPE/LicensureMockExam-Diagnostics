@@ -54,6 +54,8 @@ class SupabaseMigrationTests(unittest.TestCase):
         self.assertIn("opts_json text not null", schema)
         self.assertIn("answers_json text not null default '{}'", schema)
         self.assertIn("email_verified", schema)
+        self.assertIn("terms_accepted_at", schema)
+        self.assertIn("privacy_acknowledged_at", schema)
 
     def test_postgres_query_adapter_preserves_question_marks_in_strings(self):
         from backend import _postgres_placeholders

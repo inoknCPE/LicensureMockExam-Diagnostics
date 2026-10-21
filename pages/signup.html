@@ -105,6 +105,13 @@
                     <input type="password" id="reg-confirm" minlength="8" maxlength="30" required autocomplete="new-password">
                 </div>
                 <label class="show-password"><input type="checkbox" id="reg-show"> Show passwords</label>
+                <div class="form-group legal-acceptance">
+                    <label for="legal-accept">
+                        <input type="checkbox" id="legal-accept" required>
+                        <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms and Conditions</a>
+                        and acknowledge the <a href="privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</span>
+                    </label>
+                </div>
                 <div id="signup-error" style="display: none; color: var(--coral); font-size: 0.85rem; margin-bottom: 12px; font-weight: 600;"></div>
                 <button id="signup-submit" type="submit" class="btn-solid-pill" disabled>Create Student Account</button>
             </form>
@@ -169,10 +176,18 @@
         updateAccountType();
         setupPasswordForm({
             passwordId: 'reg-pass', confirmId: 'reg-confirm', usernameId: 'reg-name',
-            emailId: 'reg-email', showId: 'reg-show', buttonId: 'signup-submit'
+            emailId: 'reg-email', showId: 'reg-show', buttonId: 'signup-submit',
+            requiredCheckboxIds: ['legal-accept']
         });
         document.getElementById('signup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const legalAccepted = document.getElementById('legal-accept').checked;
+            if (!legalAccepted) {
+                document.getElementById('signup-error').innerText =
+                    'Accept the Terms and acknowledge the Privacy Notice to continue.';
+                document.getElementById('signup-error').style.display = 'block';
+                return;
+            }
             const username = document.getElementById('reg-name').value.trim();
             const email = document.getElementById('reg-email').value.trim();
             const pass = document.getElementById('reg-pass').value;
@@ -184,8 +199,8 @@
                 ? await CpedleDB.registerExaminer(username, email, pass, confirm,
                     document.getElementById('reg-full-name').value.trim(),
                     document.getElementById('reg-title').value.trim(),
-                    document.getElementById('reg-license').value.trim())
-                : await CpedleDB.register(username, email, pass, confirm);
+                    document.getElementById('reg-license').value.trim(), legalAccepted, legalAccepted)
+                : await CpedleDB.register(username, email, pass, confirm, legalAccepted, legalAccepted);
             if (res.success) {
                 document.getElementById('signup-form').hidden = true;
                 document.getElementById('signup-heading').textContent = 'Check Your Email';
@@ -198,5 +213,6 @@
             }
         });
     </script>
+    <script src="js/legal-links.js"></script>
 </body>
 </html>

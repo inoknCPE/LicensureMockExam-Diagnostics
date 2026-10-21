@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Notice | cpedle</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/data.js"></script>
+    <script src="js/theme-toggle.js"></script>
+</head>
+<body>
+    <nav class="new-nav">
+        <div class="nav__content">
+            <a href="index.html" class="nav-logo-box"><span>cpedle</span></a>
+            <div class="nav__options" id="nav-options-bar">
+                <a class="link" href="index.html">HOME</a>
+                <a class="link" href="faq.html">FAQ</a>
+                <a class="link" href="terms.html">TERMS</a>
+                <a class="link" href="privacy.html" aria-current="page">PRIVACY</a>
+                <a class="link" href="login.html">LOGIN</a>
+            </div>
+        </div>
+    </nav>
+    <main class="container section-padding legal-page">
+        <article class="card">
+            <p class="legal-draft-notice"><strong>Draft for review:</strong> This notice describes the application as currently understood, but it is not legal advice. The site owner must confirm actual vendors, data retention, user rights, and applicable requirements with qualified counsel before production use.</p>
+            <h1>Privacy Notice</h1>
+            <p class="legal-effective-date">Version 2026-10-21</p>
+
+            <h2>Information the service handles</h2>
+            <ul>
+                <li>Account details such as username, email address, profile name, and selected discipline.</li>
+                <li>For examiner applications, professional title and license number submitted for administrator review.</li>
+                <li>Exam activity, including issued questions, submitted answers, scores, topic breakdowns, and exam history.</li>
+                <li>Question proposals and related review activity submitted by examiners.</li>
+                <li>Session information needed to keep an account signed in and protect account actions.</li>
+            </ul>
+
+            <h2>How information is used</h2>
+            <p>The application uses this information to create and secure accounts, verify email addresses, process examiner applications, deliver exams, score answers, show reports and history, and administer the question bank. Administrators may access information needed to manage accounts, review applications, and maintain the service.</p>
+
+            <h2>Storage, access, and service providers</h2>
+            <p>Account and exam information is stored by the application. The production operator should identify the actual hosting, database, and email-delivery providers and describe any transfers or additional access before publishing a final notice. Do not submit information that is not needed to use the service.</p>
+
+            <h2>Retention and your choices</h2>
+            <p>This draft does not define a retention period, account-deletion process, or jurisdiction-specific privacy rights. The operator must set and publish those details based on the deployed service and applicable law. To ask a question or request help with account information, contact <a href="mailto:info@cpedle.com">info@cpedle.com</a>.</p>
+
+            <h2>Updates</h2>
+            <p>Changes to this notice will be published on this page with an updated version date. Review the notice periodically and whenever the service tells you it has changed.</p>
+        </article>
+    </main>
+    <footer class="footer bg-white"><div class="container"><div class="footer-bottom">info@cpedle.com</div></div></footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CpedleDB.ready;
+            renderSessionNavigation(document.getElementById('nav-options-bar'), 'privacy.html');
+        });
+    </script>
+    <script src="js/legal-links.js"></script>
+</body>
+</html>

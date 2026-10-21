@@ -47,6 +47,8 @@ REQUIRED_DATABASE_TABLES = {
 }
 SESSION_SECONDS = 12 * 60 * 60
 MAX_ATTEMPTS = 3
+TERMS_VERSION = "2026-10-21"
+PRIVACY_VERSION = "2026-10-21"
 SPECIAL = set("!@#$%^&*()_+-=[]{};:'\"\\|,.<>/?`~")
 DISCIPLINES = {
     "Network Engineer": [
@@ -311,6 +313,10 @@ def initialize() -> None:
                 invalid_attempts INTEGER NOT NULL DEFAULT 0,
                 is_locked INTEGER NOT NULL DEFAULT 0,
                 email_verified INTEGER NOT NULL DEFAULT 1,
+                terms_accepted_at INTEGER,
+                terms_version TEXT,
+                privacy_acknowledged_at INTEGER,
+                privacy_version TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS sessions (
@@ -439,6 +445,16 @@ def initialize() -> None:
             connection.execute(
                 "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1"
             )
+        user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+        user_acceptance_columns = {
+            "terms_accepted_at": "INTEGER",
+            "terms_version": "TEXT",
+            "privacy_acknowledged_at": "INTEGER",
+            "privacy_version": "TEXT",
+        }
+        for name, definition in user_acceptance_columns.items():
+            if name not in user_columns:
+                connection.execute(f"ALTER TABLE users ADD COLUMN {name} {definition}")
         if "professional_title" not in user_columns:
             connection.execute("ALTER TABLE users ADD COLUMN professional_title TEXT NOT NULL DEFAULT ''")
             if "license_number" in user_columns:
@@ -728,6 +744,8 @@ class RegisterIn(BaseModel):
     email: str
     password: str
     confirm_password: str
+    accept_terms: bool = False
+    acknowledge_privacy: bool = False
 
 
 class ExaminerRegisterIn(RegisterIn):
@@ -863,11 +881,14 @@ def bootstrap(request: Request) -> dict:
 @router.post("/auth/register")
 def register(payload: RegisterIn, request: Request, response: Response) -> dict:
     require_same_origin(request)
+    if not payload.accept_terms or not payload.acknowledge_privacy:
+        raise HTTPException(422, "Accept the Terms and acknowledge the Privacy Notice before registering.")
     if payload.password != payload.confirm_password:
         raise HTTPException(422, "Passwords do not match.")
     username = validate_username(payload.username)
     email = validate_email(payload.email)
     validate_password(payload.password)
+    accepted_at = int(time.time())
     try:
         with db() as connection:
             existing = connection.execute(
@@ -879,9 +900,11 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
                 field = "Username" if existing["username"].casefold() == username.casefold() else "Email"
                 raise HTTPException(409, f"{field} is already registered.")
             cursor = connection.execute(
-                "INSERT INTO users(username,email,password_hash,role,email_verified) "
-                "VALUES(?,?,?,'STUDENT',0) RETURNING id",
-                (username, email, hash_password(payload.password)),
+                "INSERT INTO users(username,email,password_hash,role,email_verified,"
+                "terms_accepted_at,terms_version,privacy_acknowledged_at,privacy_version) "
+                "VALUES(?,?,?,'STUDENT',0,?,?,?,?) RETURNING id",
+                (username, email, hash_password(payload.password), accepted_at,
+                 TERMS_VERSION, accepted_at, PRIVACY_VERSION),
             )
             user_id = cursor.fetchone()["id"]
             token = _create_verification_token(connection, user_id, int(time.time()))
@@ -904,6 +927,8 @@ def register(payload: RegisterIn, request: Request, response: Response) -> dict:
 def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
     """Create a pending examiner application without issuing a login session."""
     require_same_origin(request)
+    if not payload.accept_terms or not payload.acknowledge_privacy:
+        raise HTTPException(422, "Accept the Terms and acknowledge the Privacy Notice before registering.")
     if payload.password != payload.confirm_password:
         raise HTTPException(422, "Passwords do not match.")
     username = validate_username(payload.username)
@@ -919,6 +944,7 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
     if len(license_number) < 3 or len(license_number) > 50 or any(ord(char) < 32 for char in license_number):
         raise HTTPException(422, "Enter a valid license number (3–50 characters).")
     now = int(time.time())
+    accepted_at = now
     try:
         with db() as connection:
             if connection.execute("SELECT 1 FROM users WHERE lower(username)=lower(?)",
@@ -931,9 +957,12 @@ def register_examiner(payload: ExaminerRegisterIn, request: Request) -> dict:
                                   (license_number,)).fetchone():
                 raise HTTPException(409, "License number is already registered.")
             cursor = connection.execute(
-                "INSERT INTO users(username,email,password_hash,role,name,professional_title,license_number,examiner_status,email_verified) "
-                "VALUES(?,?,?,'EXAMINER',?,?,?,'pending',0) RETURNING id",
-                (username, email, hash_password(payload.password), name, title, license_number),
+                "INSERT INTO users(username,email,password_hash,role,name,professional_title,license_number,"
+                "examiner_status,email_verified,terms_accepted_at,terms_version,"
+                "privacy_acknowledged_at,privacy_version) "
+                "VALUES(?,?,?,'EXAMINER',?,?,?,'pending',0,?,?,?,?) RETURNING id",
+                (username, email, hash_password(payload.password), name, title, license_number,
+                 accepted_at, TERMS_VERSION, accepted_at, PRIVACY_VERSION),
             )
             user_id = cursor.fetchone()["id"]
             token = _create_verification_token(connection, user_id, now)
@@ -1470,10 +1499,16 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     lookup = {}
     if local_ids:
         rows = connection.execute(
-            f"SELECT id,ans,domain,cognitive,difficulty FROM questions WHERE id IN ({','.join('?' for _ in local_ids)})",
+            f"SELECT id,q,opts_json,ans,domain,cognitive,difficulty,explanation "
+            f"FROM questions WHERE id IN ({','.join('?' for _ in local_ids)})",
             local_ids,
         ).fetchall()
-        lookup.update({row["id"]: {**dict(row), "type": "local"} for row in rows})
+        lookup.update({
+            row["id"]: {
+                **dict(row), "type": "local", "options": json.loads(row["opts_json"]),
+            }
+            for row in rows
+        })
     if imported_ids:
         numbers = [item[3:] for item in imported_ids]
         if any(not number.isdigit() for number in numbers):
@@ -1485,8 +1520,8 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         with question_bank() as bank:
             if bank is not None:
                 rows = bank.execute(
-                    f"""SELECT q.id,q.question_type,q.answer_letter,q.answer_text,q.cognitive_level AS cognitive,
-                               q.difficulty,d.name AS domain
+                    f"""SELECT q.id,q.question_text,q.question_type,q.answer_letter,q.answer_text,
+                               q.image_path,q.cognitive_level AS cognitive,q.difficulty,d.name AS domain
                         FROM {bank_question_table} q
                         JOIN {bank_domain_table} d ON d.id=q.domain_id
                         WHERE q.id IN ({','.join('?' for _ in numbers)})""",
@@ -1498,13 +1533,20 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
                         f"SELECT answer_norm FROM {bank_answer_table} WHERE question_id=?",
                         (number,),
                     ).fetchall()
-                    letters = [item["letter"] for item in bank.execute(
-                        f"SELECT letter FROM {bank_choice_table} WHERE question_id=? ORDER BY letter",
+                    choices = bank.execute(
+                        f"SELECT letter,choice_text,image_path FROM {bank_choice_table} "
+                        "WHERE question_id=? ORDER BY letter",
                         (number,),
-                    )]
+                    ).fetchall()
+                    letters = [item["letter"] for item in choices]
                     lookup[f"QB-{number}"] = {
                         "domain": row["domain"], "cognitive": row["cognitive"],
                         "difficulty": row["difficulty"], "type": row["question_type"],
+                        "q": row["question_text"],
+                        "options": [item["choice_text"] or "" for item in choices],
+                        "imageUrl": bank_image_url(row["image_path"]),
+                        "optionImages": [bank_image_url(item["image_path"]) for item in choices],
+                        "explanation": "",
                         "answer_index": letters.index(row["answer_letter"])
                         if row["answer_letter"] in letters else None,
                         "accepted": {normalize_answer(item["answer_norm"]) for item in answer_rows},
@@ -1521,16 +1563,22 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
             scored = lookup[override["question_id"]]
             scored.update(domain=changed["domain"], cognitive=changed["cognitive"],
                           difficulty=changed["difficulty"])
+            scored.update({key: changed[key] for key in ("q", "opts", "explanation")
+                           if key in changed})
+            if "opts" in changed:
+                scored["options"] = changed["opts"]
             if scored["type"] in {"multiple_choice", "both"}:
                 scored["answer_index"] = changed["ans"]
             if (scored["type"] in {"identification", "both"} and
                     normalize_answer(changed["answerText"]) != normalize_answer(scored["canonical_answer"])):
+                scored["canonical_answer"] = changed["answerText"]
                 scored["accepted"] = {normalize_answer(changed["answerText"])}
     if len(lookup) != len(ids):
         raise HTTPException(422, "One or more questions no longer exist.")
     stats: dict[str, dict[str, int]] = {}
     actual = {"domains": {}, "cognitive": {}, "difficulty": {}, "joint": {}}
     correct = 0
+    question_review = []
     for answer in payload.answers:
         row = lookup[answer.id]
         if row["type"] == "local":
@@ -1548,6 +1596,27 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
         else:
             match = False
         correct += int(match)
+        options = row.get("options", [])
+        correct_index = row.get("ans") if row["type"] == "local" else row.get("answer_index")
+        correct_answer = (options[correct_index] if isinstance(correct_index, int) and
+                          0 <= correct_index < len(options) else row.get("canonical_answer", ""))
+        user_answer = (
+            options[answer.userAns] if isinstance(answer.userAns, int) and
+            0 <= answer.userAns < len(options) else
+            answer.userAns.strip() if isinstance(answer.userAns, str) and answer.userAns.strip()
+            else "Not answered"
+        )
+        if isinstance(answer.userAns, str) and row.get("canonical_answer"):
+            correct_answer = row["canonical_answer"]
+        question_review.append({
+            "id": answer.id,
+            "question": row.get("q", ""),
+            "userAnswer": user_answer,
+            "correctAnswer": correct_answer or "Correct answer unavailable",
+            "isCorrect": bool(match),
+            "explanation": row.get("explanation", ""),
+            "imageUrl": row.get("imageUrl"),
+        })
         for category, label in (("domains", row["domain"]),
                                 ("cognitive", row["cognitive"]),
                                 ("difficulty", row["difficulty"])):
@@ -1568,7 +1637,7 @@ def score_exam_payload(connection: sqlite3.Connection, payload: ExamSubmission) 
     return {
         "title": payload.title or "Practice Drill", "scorePct": pct,
         "totalItems": len(ids), "correctItems": correct, "domains": domains,
-        "distribution": actual,
+        "distribution": actual, "questionReview": question_review,
     }
 
 
@@ -1597,7 +1666,8 @@ def build_exam_report(payload: ExamSubmission, student: dict, result: dict) -> d
                ("remediation" if payload.mode == "remediation" else "unclassified"))),
               "scope": payload.scope, "planned": None, "actual": actual,
               "status": "unavailable", "studentNameAtExam": student.get("name", ""),
-              "disciplineAtExam": student.get("discipline", "")}
+              "disciplineAtExam": student.get("discipline", ""),
+              "questionReview": result.get("questionReview", [])}
     if payload.scope is None and payload.difficulty_weights is None:
         return report
     discipline = student["discipline"]
@@ -2039,6 +2109,9 @@ def exam_report(exam_id: int, user: dict = Depends(role_required("STUDENT", "ADM
     if snapshot:
         item["studentName"] = snapshot.get("studentNameAtExam") or item["studentName"]
         item["discipline"] = snapshot.get("disciplineAtExam") or item["discipline"]
+        item["questionReview"] = snapshot.get("questionReview", [])
+    else:
+        item["questionReview"] = []
     item["report"] = snapshot if user["role"] == "ADMIN" else None
     return item
 

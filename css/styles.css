@@ -245,6 +245,11 @@ select, option, optgroup {
         white-space: nowrap;
         font-size: clamp(0.65rem, 1vw, 0.8125rem);
     }
+    #student-nav-bar :is(a, button), #nav-options-bar :is(a, button) {
+        padding-inline: clamp(0.35rem, 0.7vw, 0.65rem);
+        white-space: nowrap;
+        font-size: clamp(0.62rem, 0.9vw, 0.8125rem);
+    }
     .nav__options :is(a, button) { border-left: 1px solid var(--border); }
 }
 
@@ -418,6 +423,31 @@ select, option, optgroup {
 .flag-btn.active { color: var(--coral); opacity: 1; font-weight: 600; }
 .results-card { max-width: 600px; margin: 0 auto; text-align: center; }
 .pass-badge { display: inline-block; background: rgba(46,196,182,0.1); color: var(--teal); padding: 4px 12px; border-radius: 50px; font-weight: 600; margin-bottom: 30px; }
+.answer-review { margin: 28px 0; text-align: left; }
+.answer-review h2 { margin-bottom: 8px; font-size: 1.35rem; }
+.answer-review-list { display: grid; gap: 14px; margin-top: 16px; }
+.answer-review-item { padding: 16px; border: 1px solid var(--border); border-left: 4px solid var(--coral); border-radius: 8px; background: var(--surface); }
+.answer-review-item.is-correct { border-left-color: var(--teal); }
+.answer-review-item h3 { font-size: 1rem; font-style: normal; margin-bottom: 4px; }
+.answer-review-result { font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+.answer-review-item.is-correct .answer-review-result { color: var(--dark-teal); }
+.answer-review-prompt { white-space: pre-wrap; margin-bottom: 12px; }
+.answer-review-item img { display: block; max-width: 100%; max-height: 300px; object-fit: contain; margin: 0 0 12px; }
+.answer-review-explanation { margin-top: 8px; color: var(--gray-text); }
+.legal-footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; padding: 14px 0; font-size: 0.85rem; }
+.legal-footer-links a, .legal-page a { text-decoration: underline; text-underline-offset: 3px; }
+.legal-page { max-width: 900px; }
+.legal-page .card { padding: clamp(22px, 5vw, 48px); }
+.legal-page h1 { margin-bottom: 8px; }
+.legal-page h2 { margin: 28px 0 8px; font-size: 1.25rem; font-style: normal; }
+.legal-page p, .legal-page li { margin-bottom: 12px; }
+.legal-page ul { padding-left: 24px; margin-bottom: 18px; }
+.legal-effective-date { color: var(--gray-text); font-size: 0.9rem; margin-bottom: 24px; }
+.legal-draft-notice { padding: 14px; border-left: 4px solid #D97706; background: rgba(217, 119, 6, 0.1); border-radius: 6px; }
+.legal-acceptance label { display: flex; align-items: flex-start; gap: 9px; font-size: 0.88rem; line-height: 1.5; }
+.legal-acceptance input[type="checkbox"] { width: 1rem; height: 1rem; margin: 4px 0 0; padding: 0; accent-color: var(--dark-teal); flex: 0 0 auto; }
+.legal-acceptance a, .legal-reminder a { text-decoration: underline; text-underline-offset: 3px; }
+.legal-reminder { margin: 16px 0; padding: 12px 14px; border-left: 3px solid var(--teal); border-radius: 6px; background: rgba(46, 196, 182, 0.08); color: var(--gray-text); font-size: 0.88rem; }
 
 /* DEFICIENCY TAG BADGES */
 .deficiency-tag {
